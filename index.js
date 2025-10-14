@@ -39,7 +39,6 @@ const defaultConfig = {
   help_priority: 500,
   coremaster: 12345678,
   emoji_filename: '孤独摇滚',
-  signchecker: false,
   screen_shot_http: false,
   thumwhiteList: [],
   sharing: true,
@@ -66,9 +65,20 @@ const defaultConfig = {
     },
     globalWhitelist: [],
     globalAIChance: 0.05,
-    globalAICooldown: 300
+    globalAICooldown: 300,
+    embedding: {
+      enabled: false,
+      provider: "tensorflow",
+      apiUrl: "https://api.openai.com/v1/embeddings",
+      apiKey: "sk-xxx",
+      apiModel: "text-embedding-ada-002",
+
+      maxContexts: 5,
+      similarityThreshold: 0.6,
+      cacheExpiry: 86400,
+      autoInit: true
+    }
   },
-  // 新的戳一戳配置
   poke: {
     enabled: true,  // 总开关
     priority: -5000,  // 优先级

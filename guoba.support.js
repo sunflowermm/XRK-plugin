@@ -315,14 +315,6 @@ export function supportGuoba() {
           component: 'Switch'
         },
         {
-          field: 'fncname',
-          label: 'AI前缀',
-          component: 'Input',
-          componentProps: {
-            placeholder: '请输入AI前缀',
-          }
-        },
-        {
           field: 'selfcontrol',
           label: '自定义AI开关',
           bottomHelpMessage: '开启后才会显示AI相关配置选项，开启后保存记得刷新页面',
