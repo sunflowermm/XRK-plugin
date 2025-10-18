@@ -44,62 +44,6 @@ const defaultConfig = {
   sharing: true,
   selfcontrol: true,
   
-  // ========== AI助手配置（优化版）==========
-  ai: {
-    // === 基础AI配置 ===
-    apiKey: "YOUR_AI_API_KEY_HERE",
-    baseUrl: "https://api.gptgod.online/v1",
-    fileUploadUrl: "https://api.gptgod.online/v1/file",
-    chatModel: "deepseek-ai/DeepSeek-V3",
-    visionModel: "OpenGPT-4o",
-    
-    // === 生成参数 ===
-    max_tokens: 6000,
-    temperature: 0.8,
-    top_p: 0.9,
-    presence_penalty: 0.6,
-    frequency_penalty: 0.6,
-    
-    // === 触发配置 ===
-    triggerPrefix: "",           // 触发前缀（空字符串表示只能@触发）
-    defaultPersona: "assistant",  // 默认人设
-    
-    // === 白名单配置 ===
-    whitelist: {
-      groups: [],  // 普通白名单群（@触发或前缀触发）
-      users: []    // 私聊白名单用户
-    },
-    
-    // === 全局AI配置 ===
-    globalWhitelist: [],      // 全局AI白名单群（自动参与聊天）
-    globalAIChance: 0.05,     // 全局AI触发概率（0-1）
-    globalAICooldown: 300,    // 全局AI冷却时间（秒）
-    
-    // === 语义检索配置（Embedding）===
-    embedding: {
-      // --- 基础配置 ---
-      enabled: true,                    // 是否启用语义检索
-      provider: "lightweight",           // 提供商：lightweight | onnx | hf | fasttext | api
-      maxContexts: 5,                    // 最大检索上下文数量
-      similarityThreshold: 0.6,          // 相似度阈值（0-1）
-      cacheExpiry: 86400,                // 缓存过期时间（秒）
-      autoInit: true,                    // 是否自动初始化
-      cachePath: "./data/models",        // 模型缓存路径
-      
-      onnxModel: "Xenova/all-MiniLM-L6-v2",
-      onnxQuantized: true,
-      
-      hfToken: null,
-      hfModel: "sentence-transformers/all-MiniLM-L6-v2",
-      
-      fasttextModel: "cc.zh.300.bin",
-      
-      apiUrl: "https://api.openai.com/v1/embeddings",
-      apiKey: null,
-      apiModel: "text-embedding-3-small"
-    }
-  },
-  
   // ========== 戳一戳配置 ==========
   poke: {
     enabled: true,
