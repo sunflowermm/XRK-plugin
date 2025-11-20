@@ -1,7 +1,7 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import fs from 'fs';
 import path from 'path';
-import { takeScreenshot } from '../../../lib/common/takeScreenshot.js';
+import { takeScreenshot } from '../../../components/util/takeScreenshot.js';
 
 export class showHelp extends plugin {
   constructor() {

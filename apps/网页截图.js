@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch';
-import { takeScreenshot } from '../../../lib/common/takeScreenshot.js';
+import { takeScreenshot } from '../../../components/util/takeScreenshot.js';
 import yaml from 'yaml';
 
 export class WebpageScreenshot extends plugin {

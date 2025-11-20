@@ -1,4 +1,4 @@
-import { takeScreenshot } from '../../../lib/common/takeScreenshot.js';
+import { takeScreenshot } from '../../../components/util/takeScreenshot.js';
 import path from 'path';
 import fs from 'fs';
 import yaml from 'yaml';

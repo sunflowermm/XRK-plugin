@@ -253,7 +253,7 @@ export class InstallPlugin extends plugin {
     const outputDir = path.join(process.cwd(), 'plugins/XRK/resources/help_other');
     const htmlFilePath = path.join(outputDir, `${fileName}.html`);
     fs.writeFileSync(htmlFilePath, htmlContent, 'utf8');
-    const { takeScreenshot } = await import('../../../lib/common/takeScreenshot.js');
+    const { takeScreenshot } = await import('../../../components/util/takeScreenshot.js');
     const screenshotPath = await takeScreenshot(htmlFilePath, `${fileName}_screenshot`);
     fs.unlinkSync(htmlFilePath);
     return screenshotPath;

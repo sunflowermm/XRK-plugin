@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 const _path = process.cwd();
-import { takeScreenshot } from '../../../lib/common/takeScreenshot.js';
+import { takeScreenshot } from '../../../components/util/takeScreenshot.js';
 import { 制作聊天记录 } from '../../../lib/common/util.js';
 
 function loadCityData() {
