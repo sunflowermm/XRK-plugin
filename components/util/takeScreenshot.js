@@ -10,7 +10,7 @@ import path from "node:path"
  */
 export async function takeScreenshot(target, name, options = {}) {
   try {
-    const loader = global.RendererLoader || (await import("../../../../lib/renderer/loader.js")).default
+    const loader = global.RendererLoader
     const renderer = loader.getRenderer()
     if (!renderer?.screenshot) return null
 
@@ -40,7 +40,7 @@ export async function takeScreenshot(target, name, options = {}) {
     }
 
     const result = await renderer.screenshot(name, data)
-    return result == null ? null : Buffer.isBuffer(result) ? result : Buffer.from(result)
+    return result == null ? null : (Buffer.isBuffer(result) ? result : Buffer.from(result))
   } catch (e) {
     logger.error(`[XRK takeScreenshot] ${e.message}`, e)
     return null
