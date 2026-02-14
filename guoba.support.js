@@ -1,7 +1,5 @@
-import path from 'path';
 import lodash from 'lodash';
-import cfg from "./models/cfg.js";
-import {_paths} from "./models/paths.js";
+import xrkconfig from './components/xrkconfig.js';
 
 export function supportGuoba() {
   return {
@@ -70,6 +68,12 @@ export function supportGuoba() {
           componentProps: {
             placeholder: '请选择核心主人QQ'
           }
+        },
+        {
+          field: 'peopleai',
+          label: '人工AI',
+          bottomHelpMessage: '开启后会自动打开词库ai，并非大模型ai',
+          component: 'Switch'
         },
         {
           label: '推送配置',
@@ -303,31 +307,19 @@ export function supportGuoba() {
             step: 0.01,
             defaultValue: 0.3
           }
-        },
-        {
-          label: 'AI配置',
-          component: 'SOFT_GROUP_BEGIN'
-        },
-        {
-          field: 'peopleai',
-          label: '人工AI开关',
-          bottomHelpMessage: '开启后会自动打开词库ai，并非大模型ai',
-          component: 'Switch'
         }
       ],
 
       getConfigData() {
-        return cfg.merged;
+        return xrkconfig.config;
       },
-      
-      setConfigData(data, {Result}) {
-        let config = {};
-        for (let [keyPath, value] of Object.entries(data)) {
-          lodash.set(config, keyPath, value);
+
+      setConfigData(data, { Result }) {
+        for (const [keyPath, value] of Object.entries(data)) {
+          lodash.set(xrkconfig.config, keyPath, value);
         }
-        config = lodash.merge({}, cfg.merged, config);
         try {
-          cfg.config.reader.setData(config);
+          xrkconfig.save();
           return Result.ok({}, '保存成功~');
         } catch (error) {
           return Result.error(`保存失败: ${error.message}`);

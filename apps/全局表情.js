@@ -2,28 +2,14 @@ import plugin from "../../../lib/plugins/plugin.js";
 import fs from "fs";
 import path from "path";
 import { getGroupSettings } from "./全局表情设置.js";
-import YAML from "yaml";
-
-const ROOT_PATH = process.cwd();
-const CONFIG = path.join(ROOT_PATH, 'data/xrkconfig/config.yaml');
-
-async function loadConfig() {
-    try {
-        const configData = fs.readFileSync(CONFIG, 'utf8');
-        const config = YAML.parse(configData);
-        return config;
-    } catch (error) {
-        console.error('读取配置文件时出错:', error);
-        return { emoji_filename: "流浪摇滚" };
-    }
-}
+import xrkconfig from "../components/xrkconfig.js";
 
 async function sendRandomImage(e) {
-    const config = await loadConfig();
-    const imageDir = path.join(process.cwd(), `plugins/XRK/resources/emoji/${config.emoji_filename}`);
+    const emojiDir = xrkconfig.emoji_filename;
+    const imageDir = path.join(process.cwd(), `plugins/XRK-plugin/resources/emoji/${emojiDir}`);
     try {
         if (!fs.existsSync(imageDir)) {
-            await e.reply(`指定的目录不存在：${config.emoji_filename}`, false, { recallMsg: 5 });
+            await e.reply(`指定的目录不存在：${emojiDir}`, false, { recallMsg: 5 });
             return;
         }
         const imageFiles = await fs.promises.readdir(imageDir);

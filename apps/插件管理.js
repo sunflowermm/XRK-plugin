@@ -1,13 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import plugin from '../../../lib/plugins/plugin.js';
-import { 
-  getInstalledPlugins, 
-  resolveMultiplePluginIdentifiers, 
+import {
+  getInstalledPlugins,
+  resolveMultiplePluginIdentifiers,
   execCommand,
-  pluginData 
+  pluginData,
+  createHtmlTemplate,
+  saveAndScreenshot
 } from './plugintool.js';
-import { 制作聊天记录 } from '../../../lib/common/util.js';
+import BotUtil from '../../../lib/util.js';
 
 export class ManagePlugin extends plugin {
   constructor() {
@@ -70,7 +72,7 @@ export class ManagePlugin extends plugin {
       });
     }
 
-    await 制作聊天记录(e, messages, '🌻已安装插件列表🌻');
+    await BotUtil.makeChatRecord(e, messages, '🌻已安装插件列表🌻');
   }
 
   async deletePlugin(e) {
@@ -250,29 +252,12 @@ export class ManagePlugin extends plugin {
         `;
       }).join('');
 
-      const htmlContent = this.createHtmlTemplate(`${typeName}列表 - 第 ${index + 1} 组`, content);
-      const screenshotPath = await this.saveAndScreenshot(htmlContent, `installed_${typePrefix}_group_${index + 1}`);
+      const htmlContent = createHtmlTemplate(`${typeName}列表 - 第 ${index + 1} 组`, content);
+      const screenshotPath = await saveAndScreenshot(htmlContent, `installed_${typePrefix}_group_${index + 1}`);
       images.push(segment.image(screenshotPath));
     }
 
-    if (images.length) await 制作聊天记录(e, images, `🌻已安装${typeName}列表🌻`);
-  }
-
-  createHtmlTemplate(title, content) {
-    const templatePath = path.join(process.cwd(), 'plugins/XRK/resources/plugins/template.html');
-    return fs.readFileSync(templatePath, 'utf8')
-      .replace('{{title}}', title)
-      .replace('{{content}}', content);
-  }
-
-  async saveAndScreenshot(htmlContent, fileName) {
-    const outputDir = path.join(process.cwd(), 'plugins/XRK/resources/help_other');
-    const htmlFilePath = path.join(outputDir, `${fileName}.html`);
-    fs.writeFileSync(htmlFilePath, htmlContent, 'utf8');
-    const { takeScreenshot } = await import('../../../components/util/takeScreenshot.js');
-    const screenshotPath = await takeScreenshot(htmlFilePath, `${fileName}_screenshot`);
-    fs.unlinkSync(htmlFilePath);
-    return screenshotPath;
+    if (images.length) await BotUtil.makeChatRecord(e, images, `🌻已安装${typeName}列表🌻`);
   }
 
   getPluginInfo(name) {

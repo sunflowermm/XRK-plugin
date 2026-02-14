@@ -1,18 +1,22 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'fs'
+import path from 'path'
 import {
   pluginImageSegments,
   pluginData,
   categoryPluginMap,
+  PLUGIN_CATEGORIES,
+  ensureCategoryImageSegments,
+  createHtmlTemplate,
+  saveAndScreenshot,
   downloadWithProxy,
   getGitCloneUrlWithProxy,
   switchPluginProxy,
   updatePluginRemote,
   execCommand,
   generateTextPluginInfo
-} from './plugintool.js';
-import { 制作聊天记录 } from '../../../lib/common/util.js';
-import { restart } from '../components/restart.js';
+} from './plugintool.js'
+import BotUtil from '../../../lib/util.js'
+import { restart } from '../components/restart.js'
 
 let isInstalling = false;
 
@@ -37,36 +41,55 @@ export class InstallPlugin extends plugin {
 
   async sendPluginList(e) {
     const categoryName = e.msg.match(this.rule[0].reg)[1]?.trim();
-    const categoriesToSend = categoryName && pluginImageSegments[categoryName]
-      ? [categoryName]
-      : Object.keys(pluginImageSegments);
 
-    if (categoryName && !pluginImageSegments[categoryName]) {
-      await e.reply(`未找到分类：${categoryName}`);
+    if (categoryName) {
+      const needGenerate = !pluginImageSegments[categoryName]?.length;
+      if (needGenerate) await e.reply(`正在生成「${categoryName}」列表，请稍候…`);
+      await ensureCategoryImageSegments(categoryName);
+      if (!pluginImageSegments[categoryName]?.length) {
+        await e.reply(`未找到分类：${categoryName}`);
+        return;
+      }
+      await BotUtil.makeChatRecord(e, pluginImageSegments[categoryName], categoryName);
       return;
     }
 
+    let categoriesToSend = Object.keys(pluginImageSegments);
+    if (categoriesToSend.length === 0) {
+      for (const c of PLUGIN_CATEGORIES) await ensureCategoryImageSegments(c.name);
+      categoriesToSend = Object.keys(pluginImageSegments);
+    }
     for (const category of categoriesToSend) {
-      const images = pluginImageSegments[category];
-      await 制作聊天记录(e, images, category);
+      await ensureCategoryImageSegments(category);
+      if (pluginImageSegments[category]?.length) {
+        await BotUtil.makeChatRecord(e, pluginImageSegments[category], category);
+      }
     }
   }
 
   async sendPluginListText(e) {
     const categoryName = e.msg.match(/^#文字版安装插件列表(.*)$/)[1]?.trim();
-    const categoriesToSend = categoryName && categoryPluginMap[categoryName]
-      ? [categoryName]
-      : Object.keys(categoryPluginMap);
-
-    if (categoryName && !categoryPluginMap[categoryName]) {
-      await e.reply(`未找到分类：${categoryName}`);
+    if (categoryName) {
+      await ensureCategoryImageSegments(categoryName);
+      if (!categoryPluginMap[categoryName]?.length) {
+        await e.reply(`未找到分类：${categoryName}`);
+        return;
+      }
+      const messages = categoryPluginMap[categoryName].map(p => generateTextPluginInfo(p));
+      await BotUtil.makeChatRecord(e, messages, categoryName);
       return;
     }
-
+    let categoriesToSend = Object.keys(categoryPluginMap);
+    if (categoriesToSend.length === 0) {
+      for (const c of PLUGIN_CATEGORIES) await ensureCategoryImageSegments(c.name);
+      categoriesToSend = Object.keys(categoryPluginMap);
+    }
     for (const category of categoriesToSend) {
       const plugins = categoryPluginMap[category];
-      const messages = plugins.map(plugin => generateTextPluginInfo(plugin));
-      await 制作聊天记录(e, messages, category);
+      if (plugins?.length) {
+        const messages = plugins.map(p => generateTextPluginInfo(p));
+        await BotUtil.makeChatRecord(e, messages, category);
+      }
     }
   }
 
@@ -84,8 +107,8 @@ export class InstallPlugin extends plugin {
     }
 
     const content = pluginInfos.map(info => this.generatePluginHtml(info)).join('');
-    const htmlContent = this.createHtmlTemplate(`插件查询结果`, content);
-    const screenshotPath = await this.saveAndScreenshot(htmlContent, 'search_result');
+    const htmlContent = createHtmlTemplate('插件查询结果', content);
+    const screenshotPath = await saveAndScreenshot(htmlContent, 'search_result');
     await e.reply(segment.image(screenshotPath));
   }
 
@@ -103,7 +126,7 @@ export class InstallPlugin extends plugin {
     }
 
     const messages = pluginInfos.map(plugin => generateTextPluginInfo(plugin));
-    await 制作聊天记录(e, messages, `查询结果：${searchText}`);
+    await BotUtil.makeChatRecord(e, messages, `查询结果：${searchText}`);
   }
 
   async installPlugin(e) {
@@ -240,23 +263,6 @@ export class InstallPlugin extends plugin {
         <p><strong>项目地址：</strong><a href="${pluginInfo.git || pluginInfo.url}">${pluginInfo.git || pluginInfo.url}</a></p>
       </div>
     `;
-  }
-
-  createHtmlTemplate(title, content) {
-    const templatePath = path.join(process.cwd(), 'plugins/XRK/resources/plugins/template.html');
-    return fs.readFileSync(templatePath, 'utf8')
-      .replace('{{title}}', title)
-      .replace('{{content}}', content);
-  }
-
-  async saveAndScreenshot(htmlContent, fileName) {
-    const outputDir = path.join(process.cwd(), 'plugins/XRK/resources/help_other');
-    const htmlFilePath = path.join(outputDir, `${fileName}.html`);
-    fs.writeFileSync(htmlFilePath, htmlContent, 'utf8');
-    const { takeScreenshot } = await import('../../../components/util/takeScreenshot.js');
-    const screenshotPath = await takeScreenshot(htmlFilePath, `${fileName}_screenshot`);
-    fs.unlinkSync(htmlFilePath);
-    return screenshotPath;
   }
 
   findPluginInfo(name) {

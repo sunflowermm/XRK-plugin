@@ -4,48 +4,26 @@ import fs from "fs";
 import path from "path";
 import { promisify } from "util";
 import { pipeline } from "stream";
-import yaml from "yaml";
 import { v4 as uuidv4 } from "uuid";
+import xrkconfig from "../components/xrkconfig.js";
 
-// 项目根目录和基础配置
 const _path = process.cwd();
 const baseConfig = {
-  savePathBase: path.resolve(_path, "plugins/XRK/resources/emoji"), // 图片保存基础路径
-  configPath: path.resolve(_path, "data/xrkconfig/config.yaml"),   // 配置文件路径
-  defaultDirectory: "流浪摇滚",                                    // 默认目录
-  batchSize: 20,                                                  // 每批发送图片数量
-  uuidFormat: /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i     // 完整UUID格式
+  savePathBase: path.resolve(_path, "plugins/XRK-plugin/resources/emoji"),
+  defaultDirectory: "流浪摇滚",
+  batchSize: 20,
+  uuidFormat: /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
 };
 let imageList = [];
 
-/**
- * 文件管理工具类
- */
 class FileManager {
-
   static loadConfig() {
-    try {
-      const config = yaml.parse(fs.readFileSync(baseConfig.configPath, "utf8"));
-      return config.emoji_filename || baseConfig.defaultDirectory;
-    } catch {
-      return baseConfig.defaultDirectory;
-    }
+    return xrkconfig.emoji_filename || baseConfig.defaultDirectory;
   }
 
   static saveConfig(directoryName) {
     try {
-      let config = {};
-      if (fs.existsSync(baseConfig.configPath)) {
-        config = yaml.parse(fs.readFileSync(baseConfig.configPath, "utf8")) || {};
-      }
-      config.emoji_filename = directoryName;
-
-      const configDir = path.dirname(baseConfig.configPath);
-      if (!fs.existsSync(configDir)) {
-        fs.mkdirSync(configDir, { recursive: true });
-      }
-
-      fs.writeFileSync(baseConfig.configPath, yaml.stringify(config));
+      xrkconfig.set('emoji_filename', directoryName);
       return true;
     } catch (error) {
       console.error("保存配置时出错:", error);

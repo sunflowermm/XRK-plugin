@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch';
 import { takeScreenshot } from '../../../components/util/takeScreenshot.js';
-import yaml from 'yaml';
+import xrkconfig from '../components/xrkconfig.js';
 
 export class WebpageScreenshot extends plugin {
   constructor() {
@@ -24,10 +24,8 @@ export class WebpageScreenshot extends plugin {
 
   loadConfig() {
     try {
-      const configPath = path.join(process.cwd(), 'plugins/XRK/config/httpsscreenshot.json');
-      const configfilePath = path.join(process.cwd(), 'data/xrkconfig/config.yaml');
+      const configPath = path.join(process.cwd(), 'plugins/XRK-plugin/config/httpsscreenshot.json');
       this.config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      this.fileconfig = yaml.parse(fs.readFileSync(configfilePath, 'utf8'));
       this.screenshotConfig = this.config.screenshotConfig;
     } catch (error) {}
   }
@@ -233,24 +231,15 @@ export class WebpageScreenshot extends plugin {
 
   async processUrl(url) {
     try {
-      const fileName = `screenshot_${Date.now()}`;
-      const imagePath = await takeScreenshot(url, fileName, this.screenshotConfig);
-
-      if (!fs.existsSync(imagePath)) {
-        throw new Error('截图文件未找到');
-      }
-
-      return segment.image(imagePath);
-    } catch (error) {
-      // 静默处理截图失败
+      const buf = await takeScreenshot(url, `screenshot_${Date.now()}`, this.screenshotConfig);
+      return buf ? segment.image(buf) : null;
+    } catch {
       return null;
     }
   }
 
   async autoScreenshot(e) {
-    if (!this.fileconfig.screen_shot_http) {
-      return false;
-    }
+    if (!xrkconfig.screen_shot_http) return false;
     
     try {
       // 提取URL

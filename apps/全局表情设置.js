@@ -2,7 +2,7 @@ import plugin from "../../../lib/plugins/plugin.js";
 import fs from "fs";
 import path from "path";
 
-const GLOBAL_SETTINGS_PATH = path.join(process.cwd(), '/plugins/XRK/config/group-settings');
+const GLOBAL_SETTINGS_PATH = path.join(process.cwd(), '/plugins/XRK-plugin/config/group-settings');
 
 if (!fs.existsSync(GLOBAL_SETTINGS_PATH)) {
     fs.mkdirSync(GLOBAL_SETTINGS_PATH, { recursive: true });

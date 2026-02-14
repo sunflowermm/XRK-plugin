@@ -3,9 +3,9 @@ import plugin from '../../../lib/plugins/plugin.js';
 import Cfg from '../../../lib/config/config.js';
 import YAML from 'yaml';
 import fs from 'fs';
+import xrkconfig from '../components/xrkconfig.js';
 
 const ROOT_PATH = process.cwd();
-const XRK_CONFIG_PATH = path.join(ROOT_PATH, 'data', 'xrkconfig', 'config.yaml');
 
 const generateVerificationCode = () => {
   const digits = Math.floor(100000 + Math.random() * 900000).toString();
@@ -61,29 +61,6 @@ export class Example extends plugin {
   }
 
   /**
-   * 获取 xrkconfig 配置
-   * @returns {Object} - xrkconfig 配置对象
-   */
-  getXrkConfig() {
-    if (fs.existsSync(XRK_CONFIG_PATH)) {
-      return YAML.parse(fs.readFileSync(XRK_CONFIG_PATH, 'utf8')) || {};
-    }
-    return {};
-  }
-
-  /**
-   * 保存 xrkconfig 配置
-   * @param {Object} config - 更新后的 xrkconfig 配置对象
-   */
-  saveXrkConfig(config) {
-    const dir = path.dirname(XRK_CONFIG_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(XRK_CONFIG_PATH, YAML.stringify(config), 'utf8');
-  }
-
-  /**
    * 保存并重载 other 配置
    * @param {Object} updatedConfig - 更新后的 other 配置对象
    */
@@ -123,15 +100,14 @@ export class Example extends plugin {
    */
   async setCoreMasterInternal(e, targetQQ) {
     const otherConfig = Cfg.getConfig('other');
-    const xrkConfig = this.getXrkConfig();
     otherConfig.masterQQ = otherConfig.masterQQ || [];
 
-    xrkConfig.coremaster = targetQQ;
+    xrkconfig.config.coremaster = targetQQ;
     if (!otherConfig.masterQQ.includes(targetQQ)) {
       otherConfig.masterQQ.push(targetQQ);
     }
 
-    this.saveXrkConfig(xrkConfig);
+    xrkconfig.save();
     this.saveAndReloadOtherConfig(otherConfig);
     logger.info(`核心主人设置成功：${targetQQ}`);
     await e.reply(`已将 ${targetQQ} 设置为核心主人`);
@@ -182,10 +158,9 @@ export class Example extends plugin {
     if (!e.isMaster) return;
     const { targetQQ } = this.parseInput(e);
     const otherConfig = Cfg.getConfig('other');
-    const xrkConfig = this.getXrkConfig();
     otherConfig.masterQQ = otherConfig.masterQQ || [];
 
-    if (targetQQ == xrkConfig.coremaster) {
+    if (targetQQ == xrkconfig.coremaster) {
       await e.reply('滚啊，你不能删核心主人');
       return;
     }

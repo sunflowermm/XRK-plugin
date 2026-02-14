@@ -77,13 +77,10 @@
   ],
 
   "screenshotConfig": {
-    "width": 1536,
-    "height": 2138,
-    "quality": 100,
+    "width": 1280,
+    "height": 720,
+    "quality": 90,
     "type": "jpeg",
-    "selector": null,
-    "waitForSelector": null, 
-    "waitForTimeout": null,
     "waitUntil": "networkidle2",
     "fullPage": true
   }

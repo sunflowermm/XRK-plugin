@@ -1,18 +1,18 @@
-import fs from 'fs';
-import path from 'path';
-const _path = process.cwd();
-import { takeScreenshot } from '../../../components/util/takeScreenshot.js';
-import { 制作聊天记录 } from '../../../lib/common/util.js';
+import fs from 'fs'
+import path from 'path'
+const _path = process.cwd()
+import { takeScreenshot } from '../../../components/util/takeScreenshot.js'
+import BotUtil from '../../../lib/util.js'
 
-function loadCityData() {
-    try {
-        const dataPath = path.join(_path, './plugins/XRK/resources/weather/weather.json');
-        const rawData = fs.readFileSync(dataPath, 'utf8');
-        return JSON.parse(rawData);
-    } catch (error) {
-        console.error('加载城市数据失败:', error);
-        return [];
-    }
+function loadCityData () {
+  try {
+    const dataPath = path.join(_path, './plugins/XRK-plugin/resources/weather/weather.json')
+    const rawData = fs.readFileSync(dataPath, 'utf8')
+    return JSON.parse(rawData)
+  } catch (error) {
+    logger.error('[向日葵查天气] 加载城市数据失败:', error)
+    return []
+  }
 }
 
 let cityData = loadCityData();
@@ -97,10 +97,6 @@ export class weather extends plugin {
         const suffixResults = this.tryWithSuffixes(cityWithoutSuffix);
         return suffixResults.length > 0 ? suffixResults[0] : null;
     }
-    async makeForwardMsg(e, messages, title, entitle) {
-        await 制作聊天记录(e, messages, title, entitle);
-      }
-
     async search_weather(e) {
         const match = e.msg.match(/#查天气(.*)$/);
         if (!match || !match[1]) {
@@ -128,19 +124,13 @@ export class weather extends plugin {
             try {
                 const weatherUrl = `http://www.nmc.cn/publish/forecast/${cityInfo.provinceCode}/${cityInfo.enCity}.html`;
                 const screenshotConfig = {
-                    width: 1024,
-                    height: 768,
-                    quality: 100,
-                    type: 'jpeg',
-                    selector: null,
-                    topCutRatio: 0.055,
-                    bottomCutRatio: 0.225,
-                    leftCutRatio: 0,
-                    rightCutRatio: 0,
-                    waitForSelector: null,
-                    waitForTimeout: null,
+                    width: 1280,
+                    height: 2400,
+                    quality: 90,
+                    imgType: 'jpeg',
                     waitUntil: 'networkidle2',
-                    fullPage: false
+                    fullPage: true,
+                    delayBeforeScreenshot: 2000
                 };
 
                 const imagePath = await takeScreenshot(weatherUrl, `weather_${cityInfo.enCity}`, screenshotConfig);
@@ -151,7 +141,7 @@ export class weather extends plugin {
                 messages.push(cityMsg);
                 messages.push(segment.image(imagePath));
             } catch (error) {
-                console.error(`获取${city}天气信息失败:`, error);
+                logger.error(`[向日葵查天气] 获取${city}天气信息失败:`, error);
                 errorCities.push(city);
             }
         }
@@ -160,7 +150,7 @@ export class weather extends plugin {
             return;
         }
         if (messages.length > 0) {
-           await 制作聊天记录(e, messages, '向日葵查天气', xrk);
+            await BotUtil.makeChatRecord(e, messages, '向日葵查天气', xrk);
         }
 
         if (errorCities.length > 0) {

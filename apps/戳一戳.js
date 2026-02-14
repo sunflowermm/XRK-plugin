@@ -6,9 +6,9 @@ import path from 'path'
 import fetch from 'node-fetch'
 
 const ROOT_PATH = process.cwd()
-const RESPONSES_PATH = path.join(ROOT_PATH, 'plugins/XRK/config/poke_responses.json')
-const IMAGE_DIR = path.join(ROOT_PATH, 'plugins/XRK/resources/emoji/戳一戳表情')
-const VOICE_DIR = path.join(ROOT_PATH, 'plugins/XRK/resources/voice')
+const RESPONSES_PATH = path.join(ROOT_PATH, 'plugins/XRK-plugin/config/poke_responses.json')
+const IMAGE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/emoji/戳一戳表情')
+const VOICE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/voice')
 
 // 加载响应配置
 let responses = {}

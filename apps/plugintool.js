@@ -87,8 +87,29 @@ export const proxyList = [
 ];
 
 // 缓存配置
-export const CACHE_FILE_PATH = path.join(process.cwd(), 'plugins/XRK/resources/cache/plugin_cache.json');
-export const CACHE_DIR = path.join(process.cwd(), 'plugins/XRK/resources/cache');
+export const CACHE_FILE_PATH = path.join(process.cwd(), 'plugins/XRK-plugin/resources/cache/plugin_cache.json');
+export const CACHE_DIR = path.join(process.cwd(), 'plugins/XRK-plugin/resources/cache');
+
+const PLUGIN_HTML_TEMPLATE = path.join(process.cwd(), 'plugins/XRK-plugin/resources/plugins/template.html');
+const PLUGIN_HTML_OUTPUT_DIR = path.join(process.cwd(), 'plugins/XRK-plugin/resources/help_other');
+
+/** 使用统一模板生成 HTML 字符串 */
+export function createHtmlTemplate(title, content) {
+  return fs.readFileSync(PLUGIN_HTML_TEMPLATE, 'utf8')
+    .replaceAll('{{title}}', title)
+    .replace('{{content}}', content);
+}
+
+/** 写入 HTML 并调用底层 renderer 截图，截完后删除临时 HTML */
+export async function saveAndScreenshot(htmlContent, fileName, options = {}) {
+  const htmlFilePath = path.join(PLUGIN_HTML_OUTPUT_DIR, `${fileName}.html`);
+  fs.writeFileSync(htmlFilePath, htmlContent, 'utf8');
+  try {
+    return await takeScreenshot(htmlFilePath, `${fileName}_screenshot`, { fullPage: true, width: 1024, deviceScaleFactor: 2, ...options });
+  } finally {
+    try { fs.unlinkSync(htmlFilePath); } catch (_) {}
+  }
+}
 
 export async function testProxy(proxyUrl) {
   try {
@@ -197,7 +218,7 @@ export function readCache() {
   return null;
 }
 
-export function saveCache(pluginsList, imagePathMap) {
+export function saveCache(pluginsList, imagePathMap = {}) {
   fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify({ plugins: pluginsList, imagePaths: imagePathMap, timestamp: Date.now() }, null, 2));
 }
 
@@ -205,29 +226,53 @@ export function calculatePluginsHash(plugins) {
   return crypto.createHash('md5').update(JSON.stringify(plugins)).digest('hex');
 }
 
+/** 校验缓存的截图段：每项为 image 且 file 存在 */
+function imageSegmentsValid(segments) {
+  return Array.isArray(segments) && segments.every(s => s?.type === 'image' && s?.file && fs.existsSync(s.file));
+}
+
 export function generateTextPluginInfo(plugin) {
   return `━━━━━━━━━\n【${plugin.cn_name}】(${plugin.name})\n介绍:\n${plugin.description || '暂无'}\n别名:\n${plugin.anothername || '暂无'}\n地址:\n${plugin.git || plugin.url}\n━━━━━━━━━`;
+}
+
+export const PLUGIN_CATEGORIES = [
+  { name: '推荐插件', file: 'recommended_plugins.json' },
+  { name: '文娱插件', file: 'entertainment_plugins.json' },
+  { name: 'IP类插件', file: 'ip_plugins.json' },
+  { name: '游戏插件', file: 'game_plugins.json' },
+  { name: 'JS插件', file: 'js.json' }
+];
+
+/** 确保某分类的截图段可用（内存中有效则用，否则重新生成并写缓存） */
+export async function ensureCategoryImageSegments(categoryName) {
+  const category = PLUGIN_CATEGORIES.find(c => c.name === categoryName);
+  if (!category) return;
+  if (pluginImageSegments[categoryName] && imageSegmentsValid(pluginImageSegments[categoryName])) return;
+
+  const pluginsPath = path.join(process.cwd(), `plugins/XRK-plugin/resources/plugins/${category.file}`);
+  const plugins = JSON.parse(fs.readFileSync(pluginsPath, 'utf8'));
+  updatePluginData(plugins);
+  categoryPluginMap[category.name] = plugins;
+  pluginImageSegments[category.name] = await generatePluginImages(category, plugins);
+
+  const cache = readCache() || { plugins: {}, imagePaths: {} };
+  cache.plugins[category.name] = { hash: calculatePluginsHash(plugins), imageSegments: pluginImageSegments[category.name], timestamp: Date.now() };
+  saveCache(cache.plugins, cache.imagePaths);
 }
 
 // 初始化插件列表
 export async function initializePluginList() {
   ensureCacheDir();
-  const categories = [
-    { name: '推荐插件', file: 'recommended_plugins.json' },
-    { name: '文娱插件', file: 'entertainment_plugins.json' },
-    { name: 'IP类插件', file: 'ip_plugins.json' },
-    { name: '游戏插件', file: 'game_plugins.json' },
-    { name: 'JS插件', file: 'js.json' }
-  ];
-
   const cache = readCache();
-  for (const category of categories) {
-    const pluginsPath = path.join(process.cwd(), `plugins/XRK/resources/plugins/${category.file}`);
+
+  for (const category of PLUGIN_CATEGORIES) {
+    const pluginsPath = path.join(process.cwd(), `plugins/XRK-plugin/resources/plugins/${category.file}`);
     const plugins = JSON.parse(fs.readFileSync(pluginsPath, 'utf8'));
     const currentHash = calculatePluginsHash(plugins);
+    const cached = cache?.plugins?.[category.name];
 
-    if (cache?.plugins?.[category.name]?.hash === currentHash) {
-      pluginImageSegments[category.name] = cache.plugins[category.name].imageSegments;
+    if (cached?.hash === currentHash && imageSegmentsValid(cached.imageSegments)) {
+      pluginImageSegments[category.name] = cached.imageSegments;
       updatePluginData(plugins);
       categoryPluginMap[category.name] = plugins;
       continue;
@@ -371,17 +416,10 @@ async function generatePluginImages(category, plugins) {
       </div>
     `).join('');
 
-    const htmlContent = fs.readFileSync(path.join(process.cwd(), 'plugins/XRK/resources/plugins/template.html'), 'utf8')
-      .replace('{{title}}', `${category.name} - 第 ${index + 1} 组`)
-      .replace('{{content}}', content);
-
-    const outputDir = path.join(process.cwd(), 'plugins/XRK/resources/help_other');
-    const htmlFilePath = path.join(outputDir, `${category.file.replace('.json', '')}_group_${index + 1}.html`);
-    fs.writeFileSync(htmlFilePath, htmlContent, 'utf8');
-
-    const screenshotPath = await takeScreenshot(htmlFilePath, `${category.file.replace('.json', '')}_group_${index + 1}_screenshot`);
-    images.push(segment.image(screenshotPath));
-    fs.unlinkSync(htmlFilePath);
+    const baseName = `${category.file.replace('.json', '')}_group_${index + 1}`;
+    const htmlContent = createHtmlTemplate(`${category.name} - 第 ${index + 1} 组`, content);
+    const buf = await saveAndScreenshot(htmlContent, baseName, { waitForTimeout: 600 });
+    if (buf) images.push(segment.image(buf));
   }
   return images;
 }

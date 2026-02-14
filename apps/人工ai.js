@@ -1,15 +1,11 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import fs from 'fs';
-import yaml from 'yaml';
-import { 保存yaml } from '../components/config.js';
+import xrkconfig from '../components/xrkconfig.js';
 
 const _path = process.cwd();
-const aiJsonPath = `${_path}/plugins/XRK/config/ai.json`;
-const systemConfigPath = `${_path}/data/xrkconfig/config.yaml`;
-const aiData = JSON.parse(fs.readFileSync(aiJsonPath, "utf8"));
-let systemConfig = yaml.parse(fs.readFileSync(systemConfigPath, 'utf8'));
+const aiJsonPath = `${_path}/plugins/XRK-plugin/config/ai.json`;
+const aiData = JSON.parse(fs.readFileSync(aiJsonPath, 'utf8'));
 
-// 定义插件
 export class ExamplePlugin extends plugin {
   constructor() {
     super({
@@ -18,11 +14,7 @@ export class ExamplePlugin extends plugin {
       event: 'message',
       priority: -10000,
       rule: [
-        {
-          reg: '.*',
-          fnc: 'aiHandler',
-          log: false
-        },
+        { reg: '.*', fnc: 'aiHandler', log: false },
         { reg: '^#开启向日葵ai$', fnc: 'activateAi' },
         { reg: '^#关闭向日葵ai$', fnc: 'deactivateAi' }
       ]
@@ -32,7 +24,6 @@ export class ExamplePlugin extends plugin {
   async handleResponse(e) {
     const userMessage = e.msg;
     const responseKey = this.findMatch(userMessage, aiData);
-
     if (responseKey && aiData[responseKey]) {
       const responses = aiData[responseKey];
       const reply = responses[Math.floor(Math.random() * responses.length)];
@@ -47,25 +38,20 @@ export class ExamplePlugin extends plugin {
 
   async activateAi(e) {
     if (!e.isMaster) return;
-    this.updateAiStatus(true);
+    xrkconfig.set('peopleai', true);
     await e.reply('向日葵词库AI已开启');
   }
 
   async deactivateAi(e) {
     if (!e.isMaster) return;
-    this.updateAiStatus(false);
+    xrkconfig.set('peopleai', false);
     await e.reply('向日葵词库AI已关闭');
   }
 
   async aiHandler(e) {
-    if (systemConfig.peopleai !== true) return false;
+    if (!xrkconfig.peopleai) return false;
     if (e.img) return false;
     await this.handleResponse(e);
     return false;
-  }
-
-  updateAiStatus(status) {
-    systemConfig.peopleai = status;
-    保存yaml(systemConfigPath, systemConfig);
   }
 }

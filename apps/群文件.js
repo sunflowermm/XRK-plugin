@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import fetch from 'node-fetch'
-import { 制作聊天记录 } from '../../../lib/common/util.js';
+import BotUtil from '../../../lib/util.js';
 
 const fileCache = {}
 
@@ -63,7 +63,7 @@ export class GroupFileManager extends plugin {
         messages.push(`${index + 1}. ${fileName} (${this.formatFileSize(file.file_size)})`)
       })
 
-      await 制作聊天记录(e, messages, '群文件列表', ['葵崽驾到，通通闪开'])
+      await BotUtil.makeChatRecord(e, messages, '群文件列表', ['葵崽驾到，通通闪开'])
       return true
     } catch (err) {
       logger.error(`获取群文件失败: ${err}`)

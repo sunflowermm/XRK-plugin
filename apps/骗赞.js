@@ -1,12 +1,8 @@
-import common from '../../../lib/common/common.js';
-import moment from 'moment';
-import path from 'path';
-import YAML from 'yaml';
-import _ from 'lodash';
-import fs from 'fs';
+import common from '../../../lib/common/common.js'
+import moment from 'moment'
+import _ from 'lodash'
+import xrkcfg from '../components/xrkconfig.js'
 
-const ROOT_PATH = process.cwd();
-const CONFIG_PATH = path.join(ROOT_PATH, 'data/xrkconfig/config.yaml');
 const groupLikeStatusMap = new Map();
 let isLikeTaskRunning = false;
 
@@ -138,15 +134,6 @@ export class GroupLike extends plugin {
     };
   }
 
-  loadConfig() {
-    try {
-      return YAML.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    } catch (err) {
-      logger.error(`读取群点赞配置失败: ${err}`);
-      return { thumbWhiteList: [] };
-    }
-  }
-
   updateLikeStatus(groupId, status, message = '') {
     groupLikeStatusMap.set(groupId, {
       status: status,
@@ -155,38 +142,26 @@ export class GroupLike extends plugin {
     });
   }
 
-  saveConfig(config) {
-    try {
-      fs.writeFileSync(CONFIG_PATH, YAML.stringify(config));
-      return true;
-    } catch (err) {
-      logger.error(`保存群点赞配置失败: ${err}`);
-      return false;
-    }
-  }
-
   async addWhiteList(e) {
     if (!e.isMaster) {
       await this.reply('只有主人才能操作白名单哦~');
       return true;
     }
 
-    const config = this.loadConfig();
     const groupId = e.group_id;
+    const list = [...xrkcfg.thumwhiteList];
 
-    if (!Array.isArray(config.thumbWhiteList)) {
-      config.thumbWhiteList = [];
-    }
-
-    if (config.thumbWhiteList.includes(groupId)) {
+    if (list.includes(groupId)) {
       await this.reply('该群已在白名单中~');
       return true;
     }
 
-    config.thumbWhiteList.push(groupId);
-    if (this.saveConfig(config)) {
+    list.push(groupId);
+    try {
+      xrkcfg.set('thumwhiteList', list);
       await this.reply('白名单添加成功~');
-    } else {
+    } catch (err) {
+      logger.error(`保存群点赞白名单失败: ${err}`);
       await this.reply('白名单添加失败...');
     }
     return true;
@@ -198,25 +173,26 @@ export class GroupLike extends plugin {
       return true;
     }
 
-    const config = this.loadConfig();
     const groupId = e.group_id;
+    const list = [...xrkcfg.thumwhiteList];
 
-    if (!Array.isArray(config.thumbWhiteList)) {
-      config.thumbWhiteList = [];
+    if (list.length === 0) {
       await this.reply('白名单为空');
       return true;
     }
 
-    const index = config.thumbWhiteList.indexOf(groupId);
+    const index = list.indexOf(groupId);
     if (index === -1) {
       await this.reply('该群不在白名单中');
       return true;
     }
 
-    config.thumbWhiteList.splice(index, 1);
-    if (this.saveConfig(config)) {
+    list.splice(index, 1);
+    try {
+      xrkcfg.set('thumwhiteList', list);
       await this.reply('白名单删除成功~');
-    } else {
+    } catch (err) {
+      logger.error(`保存群点赞白名单失败: ${err}`);
       await this.reply('白名单删除失败...');
     }
     return true;
@@ -253,6 +229,27 @@ export class GroupLike extends plugin {
     }
   }
 
+  async likeGroupMembers(bot, groupId) {
+    const group = bot.pickGroup(groupId);
+    if (!group) {
+      throw new Error('无法获取群信息');
+    }
+
+    const members = await group.getMemberMap();
+    const memberIds = Array.from(members.keys());
+    const batches = _.chunk(memberIds, 10);
+
+    for (const batch of batches) {
+      for (const userId of batch) {
+        await this.sendLike(bot, userId);
+      }
+      if (batches.indexOf(batch) !== batches.length - 1) {
+        const delay = _.random(300000, 600000);
+        await common.sleep(delay);
+      }
+    }
+  }
+
   async startGroupLike(e) {
     if (isLikeTaskRunning) {
       await this.reply('当前点赞任务正在进行中，请稍后再试');
@@ -260,9 +257,9 @@ export class GroupLike extends plugin {
     }
 
     const groupId = e.group_id;
-    const config = this.loadConfig();
+    const whiteList = xrkcfg.thumwhiteList;
 
-    if (config.thumbWhiteList && config.thumbWhiteList.length > 0 && !config.thumbWhiteList.includes(groupId)) {
+    if (whiteList.length > 0 && !whiteList.includes(groupId)) {
       await this.reply('该群不在白名单中，无法执行点赞任务');
       return true;
     }
@@ -273,24 +270,7 @@ export class GroupLike extends plugin {
 
     try {
       const bot = e.bot || Bot;
-      const group = bot.pickGroup(groupId);
-      if (!group) {
-        throw new Error('无法获取群信息');
-      }
-
-      const members = await group.getMemberMap();
-      const memberIds = Array.from(members.keys());
-      const batches = _.chunk(memberIds, 10);
-
-      for (let batch of batches) {
-        for (let userId of batch) {
-          await this.sendLike(bot, userId);
-        }
-        if (batches.indexOf(batch) !== batches.length - 1) {
-          const delay = _.random(300000, 600000);
-          await common.sleep(delay);
-        }
-      }
+      await this.likeGroupMembers(bot, groupId);
 
       this.updateLikeStatus(groupId, 'completed', '手动任务执行完成');
       await this.reply('群点赞任务执行完成');
@@ -313,12 +293,11 @@ export class GroupLike extends plugin {
     logger.info('开始执行群点赞任务...');
     isLikeTaskRunning = true;
 
-    const config = this.loadConfig();
     const bots = Array.from(Bot).filter(([_, bot]) => bot && !/^[a-zA-Z]+$/.test(bot.uin));
 
     try {
       for (let [_, bot] of bots) {
-        const whiteList = config.thumbWhiteList || [];
+        const whiteList = xrkcfg.thumwhiteList;
         const groups = whiteList.length > 0 ? whiteList : Array.from(bot.gl.keys());
 
         for (let groupId of groups) {
@@ -326,22 +305,7 @@ export class GroupLike extends plugin {
 
           try {
             logger.info(`开始为群 ${groupId} 点赞`);
-            const group = bot.pickGroup(groupId);
-            if (!group) continue;
-
-            const members = await group.getMemberMap();
-            const memberIds = Array.from(members.keys());
-            const batches = _.chunk(memberIds, 10);
-
-            for (let batch of batches) {
-              for (let userId of batch) {
-                await this.sendLike(bot, userId);
-              }
-              if (batches.indexOf(batch) !== batches.length - 1) {
-                const delay = _.random(300000, 600000);
-                await common.sleep(delay);
-              }
-            }
+            await this.likeGroupMembers(bot, groupId);
 
             this.updateLikeStatus(groupId, 'completed', '自动任务执行完成');
             logger.info(`群 ${groupId} 点赞完成`);

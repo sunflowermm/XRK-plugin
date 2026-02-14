@@ -1,8 +1,6 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import { 解析网页json } from '../components/config.js';
-import fs from 'fs';
-import path from 'path';
-import YAML from 'yaml';
+import xrkconfig from '../components/xrkconfig.js';
 
 const URLS = {
   img: {
@@ -47,23 +45,11 @@ export class AvatarPlugin extends plugin {
         { reg: "^#?妹子图", fnc: 'img_meizi' }
       ]
     });
-    this._path = process.cwd();
-    this.configDir = path.join(this._path, 'data', 'xrkconfig');
-    this.configFile = path.join(this.configDir, 'config.yaml');
   }
 
   async checkSharing() {
-    try {
-      const config = YAML.parse(fs.readFileSync(this.configFile, 'utf8'));
-      if (!config.sharing) {
-        return false;
-      }
-      return true;
-    } catch (error) {
-      console.error('读取配置文件失败:', error);
-      await this.e.reply('配置文件读取失败，功能已禁用');
-      return false;
-    }
+    if (!xrkconfig.sharing) return false;
+    return true;
   }
 
   async sendImg(url) {
