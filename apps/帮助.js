@@ -1,4 +1,4 @@
-import { takeScreenshot } from '../../../components/util/takeScreenshot.js';
+import { takeScreenshot } from '../components/util/takeScreenshot.js';
 import path from 'path';
 import fs from 'fs';
 import { helpCfg, helpList } from '../config/system/help_system.js';

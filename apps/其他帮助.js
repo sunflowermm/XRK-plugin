@@ -1,7 +1,7 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import fs from 'fs';
 import path from 'path';
-import { takeScreenshot } from '../../../components/util/takeScreenshot.js';
+import { takeScreenshot } from '../components/util/takeScreenshot.js';
 
 const helpDir = path.join(process.cwd(), 'plugins/XRK-plugin/resources/help');
 

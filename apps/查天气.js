@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 const _path = process.cwd()
-import { takeScreenshot } from '../../../components/util/takeScreenshot.js'
+import { takeScreenshot } from '../components/util/takeScreenshot.js'
 import BotUtil from '../../../lib/util.js'
 
 function loadCityData () {

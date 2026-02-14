@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import fetch from 'node-fetch';
-import { takeScreenshot } from '../../../components/util/takeScreenshot.js';
+import { takeScreenshot } from '../components/util/takeScreenshot.js';
 
 export let pluginImageSegments = {};
 export let pluginData = {};
