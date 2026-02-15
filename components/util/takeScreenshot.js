@@ -24,8 +24,16 @@ export async function takeScreenshot(target, name, options = {}) {
     if (options.clip && (options.clip.w !== undefined || options.clip.h !== undefined)) {
       data.clip = { x: options.clip.x, y: options.clip.y, width: options.clip.width ?? options.clip.w, height: options.clip.height ?? options.clip.h }
     }
-    const result = await renderer.screenshot(name, data)
-    return result == null ? null : (Buffer.isBuffer(result) ? result : Buffer.from(result))
+    let result = await renderer.screenshot(name, data)
+    if (result == null) return null
+    if (Array.isArray(result) && result.length > 0) result = result[0]
+    if (Buffer.isBuffer(result)) return result
+    if (result?.buffer != null && Buffer.isBuffer(result.buffer)) return result.buffer
+    try {
+      return Buffer.from(result)
+    } catch {
+      return result?.buffer != null ? Buffer.from(result.buffer) : null
+    }
   } catch (e) {
     logger?.error?.(`[XRK takeScreenshot] ${e.message}`, e)
     return null
