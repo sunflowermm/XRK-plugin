@@ -107,7 +107,7 @@ function normalizeSegmentsToCacheDir(segments, category) {
   fs.mkdirSync(segmentDir, { recursive: true });
   return segments.map((s, i) => {
     if (s?.type !== "image") return s;
-    if (s.file && fs.existsSync(s.file)) {
+    if (typeof s.file === "string" && s.file !== "" && fs.existsSync(s.file)) {
       const dest = path.join(segmentDir, `${i}${path.extname(s.file) || ".jpg"}`);
       fs.copyFileSync(s.file, dest);
       return { type: "image", file: dest };
@@ -283,7 +283,12 @@ export function calculatePluginsHash(plugins) {
 }
 
 function imageSegmentsValid(segments) {
-  return Array.isArray(segments) && segments.length > 0 && segments.every(s => s?.type === "image" && s?.file && fs.existsSync(s.file));
+  if (!Array.isArray(segments) || segments.length === 0) return false;
+  return segments.every(s => {
+    if (s?.type !== "image" || typeof s?.file !== "string" || s.file === "") return false;
+    if (s.file.startsWith("base64:") || s.file.startsWith("data:")) return true;
+    return fs.existsSync(s.file);
+  });
 }
 
 export function generateTextPluginInfo(plugin) {
@@ -298,11 +303,22 @@ export const PLUGIN_CATEGORIES = [
   { name: 'JS插件', file: 'js.json' }
 ];
 
+/** 按用户输入解析分类：先匹配 name，再匹配 file 去掉 .json 的部分 */
+export function getCategoryByInput(input) {
+  const trimmed = typeof input === 'string' ? input.trim() : '';
+  if (!trimmed) return undefined;
+  return (
+    PLUGIN_CATEGORIES.find(c => c.name === trimmed) ||
+    PLUGIN_CATEGORIES.find(c => (c.file || '').replace(/\.json$/i, '') === trimmed)
+  );
+}
+
 /** 确保某分类的截图段可用（内存中有效则用，否则重新生成并写缓存） */
 export async function ensureCategoryImageSegments(categoryName) {
-  const category = PLUGIN_CATEGORIES.find(c => c.name === categoryName);
+  const category = getCategoryByInput(categoryName) ?? PLUGIN_CATEGORIES.find(c => c.name === categoryName);
   if (!category) return;
-  if (pluginImageSegments[categoryName] && imageSegmentsValid(pluginImageSegments[categoryName])) return;
+  const key = category.name;
+  if (pluginImageSegments[key]?.length > 0 && imageSegmentsValid(pluginImageSegments[key])) return;
 
   const pluginsPath = path.join(process.cwd(), `plugins/XRK-plugin/resources/plugins/${category.file}`);
   const plugins = JSON.parse(fs.readFileSync(pluginsPath, 'utf8'));

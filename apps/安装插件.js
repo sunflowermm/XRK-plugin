@@ -5,6 +5,7 @@ import {
   pluginData,
   categoryPluginMap,
   PLUGIN_CATEGORIES,
+  getCategoryByInput,
   ensureCategoryImageSegments,
   createHtmlTemplate,
   saveAndScreenshot,
@@ -43,14 +44,21 @@ export class InstallPlugin extends plugin {
     const categoryName = e.msg.match(this.rule[0].reg)[1]?.trim();
 
     if (categoryName) {
-      const needGenerate = !pluginImageSegments[categoryName]?.length;
-      if (needGenerate) await e.reply(`正在生成「${categoryName}」列表，请稍候…`);
-      await ensureCategoryImageSegments(categoryName);
-      if (!pluginImageSegments[categoryName]?.length) {
+      const category = getCategoryByInput(categoryName);
+      if (!category) {
         await e.reply(`未找到分类：${categoryName}`);
         return;
       }
-      await BotUtil.makeChatRecord(e, pluginImageSegments[categoryName], categoryName);
+      const key = category.name;
+      const needGenerate = !pluginImageSegments[key]?.length;
+      if (needGenerate) await e.reply(`正在生成「${key}」列表，请稍候…`);
+      await ensureCategoryImageSegments(key);
+      const segments = pluginImageSegments[key];
+      if (!segments?.length) {
+        await e.reply(`未找到分类：${categoryName}`);
+        return;
+      }
+      await BotUtil.makeChatRecord(e, segments, key);
       return;
     }
 
@@ -70,13 +78,20 @@ export class InstallPlugin extends plugin {
   async sendPluginListText(e) {
     const categoryName = e.msg.match(/^#文字版安装插件列表(.*)$/)[1]?.trim();
     if (categoryName) {
-      await ensureCategoryImageSegments(categoryName);
-      if (!categoryPluginMap[categoryName]?.length) {
+      const category = getCategoryByInput(categoryName);
+      if (!category) {
         await e.reply(`未找到分类：${categoryName}`);
         return;
       }
-      const messages = categoryPluginMap[categoryName].map(p => generateTextPluginInfo(p));
-      await BotUtil.makeChatRecord(e, messages, categoryName);
+      const key = category.name;
+      await ensureCategoryImageSegments(key);
+      const plugins = categoryPluginMap[key];
+      if (!plugins?.length) {
+        await e.reply(`未找到分类：${categoryName}`);
+        return;
+      }
+      const messages = plugins.map(p => generateTextPluginInfo(p));
+      await BotUtil.makeChatRecord(e, messages, key);
       return;
     }
     let categoriesToSend = Object.keys(categoryPluginMap);
