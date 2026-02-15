@@ -21,6 +21,16 @@ import { restart } from '../components/restart.js'
 
 let isInstalling = false;
 
+const REG = {
+  installList: /^#安装插件列表(.*)$/,
+  installListText: /^#文字版安装插件列表(.*)$/,
+  search: /^#插件查询(.*)$/,
+  searchText: /^#文字版插件查询(.*)$/,
+  install: /^#安装插件(.*)$/,
+  switchProxy: /^#切换代理\s*(.*?)$/,
+  installDeps: /^#打依赖\s*(.*?)$/
+};
+
 export class InstallPlugin extends plugin {
   constructor() {
     super({
@@ -29,19 +39,19 @@ export class InstallPlugin extends plugin {
       event: 'message',
       priority: 1,
       rule: [
-        { reg: '^#安装插件列表(.*)$', fnc: 'sendPluginList' },
-        { reg: '^#文字版安装插件列表(.*)$', fnc: 'sendPluginListText' },
-        { reg: '^#插件查询(.*)$', fnc: 'searchPlugin' },
-        { reg: '^#文字版插件查询(.*)$', fnc: 'searchPluginText' },
-        { reg: '^#安装插件(.*)$', fnc: 'installPlugin' },
-        { reg: '^#切换代理\\s*(.*?)$', fnc: 'switchProxy' },
-        { reg: '^#打依赖\\s*(.*?)$', fnc: 'installDependencies' }
+        { reg: REG.installList, fnc: 'sendPluginList' },
+        { reg: REG.installListText, fnc: 'sendPluginListText' },
+        { reg: REG.search, fnc: 'searchPlugin' },
+        { reg: REG.searchText, fnc: 'searchPluginText' },
+        { reg: REG.install, fnc: 'installPlugin' },
+        { reg: REG.switchProxy, fnc: 'switchProxy' },
+        { reg: REG.installDeps, fnc: 'installDependencies' }
       ],
     });
   }
 
   async sendPluginList(e) {
-    const categoryName = e.msg.match(this.rule[0].reg)[1]?.trim();
+    const categoryName = e.msg.match(REG.installList)?.[1]?.trim();
 
     if (categoryName) {
       const category = getCategoryByInput(categoryName);
@@ -66,7 +76,7 @@ export class InstallPlugin extends plugin {
   }
 
   async sendPluginListText(e) {
-    const categoryName = e.msg.match(/^#文字版安装插件列表(.*)$/)[1]?.trim();
+    const categoryName = e.msg.match(REG.installListText)?.[1]?.trim();
     if (categoryName) {
       const category = getCategoryByInput(categoryName);
       if (!category) {
@@ -93,7 +103,7 @@ export class InstallPlugin extends plugin {
   }
 
   async searchPlugin(e) {
-    const searchText = e.msg.match(this.rule[2].reg)[1]?.trim();
+    const searchText = e.msg.match(REG.search)?.[1]?.trim();
     if (!searchText) {
       await e.reply('请输入要查询的插件名称');
       return;
@@ -116,7 +126,7 @@ export class InstallPlugin extends plugin {
   }
 
   async searchPluginText(e) {
-    const searchText = e.msg.match(/^#文字版插件查询(.*)$/)[1]?.trim();
+    const searchText = e.msg.match(REG.searchText)?.[1]?.trim();
     if (!searchText) {
       await e.reply('请输入要查询的插件名称');
       return;
@@ -143,7 +153,7 @@ export class InstallPlugin extends plugin {
       return;
     }
 
-    const pluginNamesStr = e.msg.match(this.rule[4].reg)[1]?.trim();
+    const pluginNamesStr = e.msg.match(REG.install)?.[1]?.trim();
     if (!pluginNamesStr) {
       await e.reply('⚠️ 请指定要安装的插件名称');
       return;
@@ -157,7 +167,7 @@ export class InstallPlugin extends plugin {
     }
     logger.info(`[插件安装器] 开始安装插件：${pluginNames.join(', ')}`);
 
-    const results = { installed: [], jsInstalled: [], failed: [] };
+    const results = { installed: [], jsInstalled: [], failed: [], skipped: [] };
     await e.reply('📦 开始安装插件...');
 
     for (const name of pluginNames) {
@@ -171,7 +181,7 @@ export class InstallPlugin extends plugin {
       const pluginDirPath = path.join(process.cwd(), 'plugins', isJsPlugin ? 'example' : '', pluginInfo.name);
 
       if (fs.existsSync(pluginDirPath)) {
-        await e.reply(`ℹ️ 插件 ${pluginInfo.cn_name} 已安装，跳过`);
+        results.skipped.push(pluginInfo.cn_name || pluginInfo.name);
         continue;
       }
 
@@ -219,7 +229,7 @@ export class InstallPlugin extends plugin {
       return;
     }
 
-    const pluginName = e.msg.match(/^#切换代理\s*(.*?)$/)[1]?.trim();
+    const pluginName = e.msg.match(REG.switchProxy)?.[1]?.trim();
     if (!pluginName) {
       await e.reply('⚠️ 请指定要切换代理的插件名称');
       return;
@@ -245,7 +255,7 @@ export class InstallPlugin extends plugin {
       return;
     }
 
-    const dependencyStr = e.msg.match(/^#打依赖\s*(.*?)$/)[1]?.trim();
+    const dependencyStr = e.msg.match(REG.installDeps)?.[1]?.trim();
     await e.reply(`⏳ 正在安装${dependencyStr ? `依赖 ${dependencyStr}` : '项目依赖'}...`);
     await execCommand(dependencyStr ? `pnpm add ${dependencyStr} -w` : 'pnpm install');
     await e.reply('✅ 依赖安装完成！');
@@ -266,14 +276,18 @@ export class InstallPlugin extends plugin {
   }
 
   findPluginInfo(name) {
-    return pluginData[name] || pluginData[name.toLowerCase()] || pluginData[name.replace(/\s+/g, '')];
+    const key = name?.trim();
+    if (!key) return null;
+    return pluginData[key] || pluginData[key.toLowerCase()] || pluginData[key.replace(/\s+/g, '')]
+      || Object.values(pluginData).find(p => p && (p.name === key || p.cn_name === key || (p.anothername && p.anothername.split(/\s+/).includes(key))));
   }
 
   async sendInstallReport(e, results) {
     let report = '📊 安装任务已完成！';
-    if (results.installed.length) report += `\n✅ 成功安装插件：\n  - ${results.installed.join('\n  - ')}`;
-    if (results.jsInstalled.length) report += `\n✅ 成功安装JS插件：\n  - ${results.jsInstalled.join('\n  - ')}`;
-    if (results.failed.length) report += `\n❌ 安装失败插件：\n  - ${results.failed.join('\n  - ')}`;
+    if (results.skipped?.length) report += `\nℹ️ 以下插件已存在，已跳过：\n  - ${results.skipped.join('\n  - ')}`;
+    if (results.installed?.length) report += `\n✅ 成功安装插件：\n  - ${results.installed.join('\n  - ')}`;
+    if (results.jsInstalled?.length) report += `\n✅ 成功安装JS插件：\n  - ${results.jsInstalled.join('\n  - ')}`;
+    if (results.failed?.length) report += `\n❌ 安装失败插件：\n  - ${results.failed.join('\n  - ')}`;
     await e.reply(report);
   }
 
