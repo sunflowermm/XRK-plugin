@@ -29,6 +29,8 @@ export async function takeScreenshot(target, name, options = {}, renderer = null
     if (result == null) return null
     if (Array.isArray(result) && result.length > 0) result = result[0]
     if (Buffer.isBuffer(result)) return result
+    // 兼容层 lib/puppeteer/puppeteer.js 会返回 segment（type:'image', data:{ file }），解包出 file 供 segment.image() 使用
+    if (result?.type === 'image' && result?.data?.file != null) return result.data.file
     if (result?.buffer != null && Buffer.isBuffer(result.buffer)) return result.buffer
     try {
       return Buffer.from(result)
