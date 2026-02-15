@@ -123,6 +123,7 @@ export class weather extends plugin {
 
             try {
                 const weatherUrl = `http://www.nmc.cn/publish/forecast/${cityInfo.provinceCode}/${cityInfo.enCity}.html`;
+                // 裁剪比例 0–1，可改：顶部裁 8%、底部裁 25%
                 const screenshotConfig = {
                     width: 1280,
                     height: 2400,
@@ -130,16 +131,19 @@ export class weather extends plugin {
                     imgType: 'jpeg',
                     waitUntil: 'networkidle2',
                     fullPage: true,
-                    delayBeforeScreenshot: 2000
+                    delayBeforeScreenshot: 2000,
+                    cropTopPercent: 0.06,
+                    cropBottomPercent: 0.23
                 };
 
-                const imagePath = await takeScreenshot(weatherUrl, `weather_${cityInfo.enCity}`, screenshotConfig);
-                
+                const imageResult = await takeScreenshot(weatherUrl, `weather_${cityInfo.enCity}`, screenshotConfig);
+                if (!imageResult) throw new Error('截图失败');
+
                 let cityMsg = [];
                 cityMsg.push(`${city}的天气信息`);
                 xrk.push(`${city}`)
                 messages.push(cityMsg);
-                messages.push(segment.image(imagePath));
+                messages.push(segment.image(imageResult));
             } catch (error) {
                 logger.error(`[向日葵查天气] 获取${city}天气信息失败:`, error);
                 errorCities.push(city);

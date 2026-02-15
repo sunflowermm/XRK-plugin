@@ -1,9 +1,10 @@
 import path from "node:path"
+import RendererLoader from "../../../../lib/renderer/loader.js"
 
-export async function takeScreenshot(target, name, options = {}) {
+export async function takeScreenshot(target, name, options = {}, renderer = null) {
   try {
-    const renderer = global.RendererLoader?.getRenderer?.()
-    if (!renderer?.screenshot) return null
+    const r = renderer ?? RendererLoader.getRenderer()
+    if (!r?.screenshot) return null
     const isUrl = /^https?:\/\//i.test(String(target))
     const data = {
       width: 1024,
@@ -24,7 +25,7 @@ export async function takeScreenshot(target, name, options = {}) {
     if (options.clip && (options.clip.w !== undefined || options.clip.h !== undefined)) {
       data.clip = { x: options.clip.x, y: options.clip.y, width: options.clip.width ?? options.clip.w, height: options.clip.height ?? options.clip.h }
     }
-    let result = await renderer.screenshot(name, data)
+    let result = await r.screenshot(name, data)
     if (result == null) return null
     if (Array.isArray(result) && result.length > 0) result = result[0]
     if (Buffer.isBuffer(result)) return result

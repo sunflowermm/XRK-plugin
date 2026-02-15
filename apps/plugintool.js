@@ -116,7 +116,7 @@ async function renderPluginListScreenshot(htmlContent, saveId, options = {}) {
     const raw = await takeScreenshot(htmlPath, `${saveId}_screenshot`, { fullPage: true, width: 1024, deviceScaleFactor: 2, ...options });
     return toBuffer(raw);
   } finally {
-    try { fs.unlinkSync(htmlPath); } catch (_) {}
+    try { fs.unlinkSync(htmlPath); } catch {}
   }
 }
 
@@ -182,7 +182,7 @@ export async function downloadWithProxy(url, maxRetries = 3) {
 }
 
 // 获取Git克隆URL（使用代理）
-export async function getGitCloneUrlWithProxy(repoUrl, maxRetries = 3) {
+export async function getGitCloneUrlWithProxy(repoUrl) {
   if (!repoUrl.includes('github.com')) return repoUrl;
 
   // 串行测试代理
@@ -233,7 +233,7 @@ function readScreenshotIndex() {
   try {
     if (fs.existsSync(PLUGIN_SCREENSHOT_INDEX))
       return JSON.parse(fs.readFileSync(PLUGIN_SCREENSHOT_INDEX, "utf8"));
-  } catch (_) {}
+  } catch {}
   return {};
 }
 
