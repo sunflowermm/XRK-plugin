@@ -86,29 +86,51 @@ export const proxyList = [
     "https://www.ghproxy.cn"
 ];
 
-// 缓存配置（主文件仅存 hash/timestamp，各分类截图单独文件避免 JSON 过大）
-export const CACHE_FILE_PATH = path.join(process.cwd(), 'plugins/XRK-plugin/resources/cache/plugin_cache.json');
-export const CACHE_DIR = path.join(process.cwd(), 'plugins/XRK-plugin/resources/cache');
+export const CACHE_FILE_PATH = path.join(process.cwd(), "plugins/XRK-plugin/resources/cache/plugin_cache.json");
+export const CACHE_DIR = path.join(process.cwd(), "plugins/XRK-plugin/resources/cache");
+
+function getCategorySafeName(category) {
+  return (category?.file || String(category)).replace(/\.json$/, "");
+}
 
 function getCategoryCachePath(category) {
-  const safe = (category?.file || String(category)).replace(/\.json$/, '');
-  return path.join(CACHE_DIR, `plugin_cache_${safe}.json`);
+  return path.join(CACHE_DIR, `plugin_cache_${getCategorySafeName(category)}.json`);
+}
+
+function getCategorySegmentDir(category) {
+  return path.join(CACHE_DIR, "segments", getCategorySafeName(category));
+}
+
+function normalizeSegmentsToCacheDir(segments, category) {
+  if (!Array.isArray(segments) || segments.length === 0) return segments;
+  const segmentDir = getCategorySegmentDir(category);
+  fs.mkdirSync(segmentDir, { recursive: true });
+  return segments.map((s, i) => {
+    if (s?.type !== "image") return s;
+    if (s.file && fs.existsSync(s.file)) {
+      const dest = path.join(segmentDir, `${i}${path.extname(s.file) || ".jpg"}`);
+      fs.copyFileSync(s.file, dest);
+      return { type: "image", file: dest };
+    }
+    if (typeof s.url === "string") {
+      const dest = path.join(segmentDir, `${i}.jpg`);
+      fs.writeFileSync(dest, Buffer.from(s.url.replace(/^data:image\/\w+;base64,/, ""), "base64"));
+      return { type: "image", file: dest };
+    }
+    return s;
+  });
 }
 
 const PLUGIN_HTML_TEMPLATE = path.join(process.cwd(), 'plugins/XRK-plugin/resources/plugins/template.html');
 const PLUGIN_HTML_OUTPUT_DIR = path.join(process.cwd(), 'plugins/XRK-plugin/resources/help_other');
 
-/** 使用统一模板生成 HTML 字符串 */
 export function createHtmlTemplate(title, content) {
-  return fs.readFileSync(PLUGIN_HTML_TEMPLATE, 'utf8')
-    .replaceAll('{{title}}', title)
-    .replace('{{content}}', content);
+  return fs.readFileSync(PLUGIN_HTML_TEMPLATE, "utf8").replaceAll("{{title}}", title).replace("{{content}}", content);
 }
 
-/** 写入 HTML 并调用底层 renderer 截图，截完后删除临时 HTML */
 export async function saveAndScreenshot(htmlContent, fileName, options = {}) {
   const htmlFilePath = path.join(PLUGIN_HTML_OUTPUT_DIR, `${fileName}.html`);
-  fs.writeFileSync(htmlFilePath, htmlContent, 'utf8');
+  fs.writeFileSync(htmlFilePath, htmlContent, "utf8");
   try {
     return await takeScreenshot(htmlFilePath, `${fileName}_screenshot`, { fullPage: true, width: 1024, deviceScaleFactor: 2, ...options });
   } finally {
@@ -215,7 +237,7 @@ export async function updatePluginRemote(pluginPath, newRemote) {
 
 // 缓存相关函数
 export function ensureCacheDir() {
-  if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
 }
 
 export function readCache() {
@@ -223,36 +245,33 @@ export function readCache() {
   return null;
 }
 
-/** 读取某分类的截图缓存（单独文件，避免主缓存 JSON 过大导致 Invalid string length） */
 function readCategoryCache(category) {
-  const p = getCategoryCachePath(category);
-  if (!fs.existsSync(p)) return null;
   try {
-    return JSON.parse(fs.readFileSync(p, 'utf8'));
+    return JSON.parse(fs.readFileSync(getCategoryCachePath(category), "utf8"));
   } catch {
     return null;
   }
 }
 
 export function saveCache(pluginsList, imagePathMap = {}) {
-  const light = {
-    plugins: {},
-    imagePaths: imagePathMap,
-    timestamp: Date.now()
-  };
+  const light = { plugins: {}, imagePaths: imagePathMap || {}, timestamp: Date.now() };
   for (const [catName, data] of Object.entries(pluginsList || {})) {
     light.plugins[catName] = { hash: data.hash, timestamp: data.timestamp };
     const category = PLUGIN_CATEGORIES.find(c => c.name === catName);
-    if (category && data.imageSegments != null) {
-      try {
-        const payload = JSON.stringify({ hash: data.hash, imageSegments: data.imageSegments, timestamp: data.timestamp ?? Date.now() }, null, 2);
-        fs.writeFileSync(getCategoryCachePath(category), payload);
-      } catch (err) {
-        if (err?.name === 'RangeError' && /string length|Invalid/.test(String(err.message))) {
-          logger?.warn?.(`[插件安装器] 分类 ${catName} 截图缓存过大，仅保留 hash 缓存`);
-        } else {
-          logger?.error?.(`[插件安装器] 写入分类缓存失败 ${catName}: ${err.message}`);
-        }
+    if (!category || data.imageSegments == null) continue;
+    const normalized = normalizeSegmentsToCacheDir(data.imageSegments, category);
+    try {
+      fs.writeFileSync(
+        getCategoryCachePath(category),
+        JSON.stringify({ hash: data.hash, imageSegments: normalized, timestamp: data.timestamp ?? Date.now() }, null, 2)
+      );
+      data.imageSegments = normalized;
+    } catch (err) {
+      if (err?.name === 'RangeError') {
+        logger?.warn?.(`[插件安装器] 分类 ${catName} 截图缓存过大，仅保留 hash`);
+        delete data.imageSegments;
+      } else {
+        logger?.error?.(`[插件安装器] 写入分类缓存失败 ${catName}: ${err.message}`);
       }
     }
   }
@@ -263,9 +282,8 @@ export function calculatePluginsHash(plugins) {
   return crypto.createHash('md5').update(JSON.stringify(plugins)).digest('hex');
 }
 
-/** 校验缓存的截图段：每项为 image 且 file 存在 */
 function imageSegmentsValid(segments) {
-  return Array.isArray(segments) && segments.every(s => s?.type === 'image' && s?.file && fs.existsSync(s.file));
+  return Array.isArray(segments) && segments.length > 0 && segments.every(s => s?.type === "image" && s?.file && fs.existsSync(s.file));
 }
 
 export function generateTextPluginInfo(plugin) {
@@ -295,6 +313,7 @@ export async function ensureCategoryImageSegments(categoryName) {
   const cache = readCache() || { plugins: {}, imagePaths: {} };
   cache.plugins[category.name] = { hash: calculatePluginsHash(plugins), imageSegments: pluginImageSegments[category.name], timestamp: Date.now() };
   saveCache(cache.plugins, cache.imagePaths);
+  if (cache.plugins[category.name].imageSegments) pluginImageSegments[category.name] = cache.plugins[category.name].imageSegments;
 }
 
 // 初始化插件列表
@@ -322,7 +341,8 @@ export async function initializePluginList() {
 
     const cacheData = cache || { plugins: {}, imagePaths: {} };
     cacheData.plugins[category.name] = { hash: currentHash, imageSegments: pluginImageSegments[category.name], timestamp: Date.now() };
-    saveCache(cacheData.plugins, cacheData.imagePaths ?? {});
+    saveCache(cacheData.plugins, cacheData.imagePaths);
+    if (cacheData.plugins[category.name].imageSegments) pluginImageSegments[category.name] = cacheData.plugins[category.name].imageSegments;
   }
 }
 

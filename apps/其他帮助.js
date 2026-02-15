@@ -46,7 +46,7 @@ export class showHelp extends plugin {
     }
     const htmlPath = path.join(helpDir, `${htmlName}.html`);
     this.updateCSS(htmlPath);
-    const buf = await takeScreenshot(htmlPath, imageName, { fullPage: true, width: 1024, deviceScaleFactor: 2 });
+    const buf = await takeScreenshot(htmlPath, imageName, { fullPage: true, width: 1024, deviceScaleFactor: 2, priority: true });
     if (buf) await e.reply(segment.image(buf));
     else await e.reply('生成帮助截图失败，请稍后再试。');
   }

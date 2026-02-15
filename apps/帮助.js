@@ -51,7 +51,7 @@ export class showmainHelp extends plugin {
     fs.writeFileSync(htmlPath, html);
 
     try {
-      const buf = await takeScreenshot(htmlPath, 'help_screenshot', { fullPage: true, width: 1024, deviceScaleFactor: 2, waitForTimeout: 800 });
+      const buf = await takeScreenshot(htmlPath, 'help_screenshot', { fullPage: true, width: 1024, deviceScaleFactor: 2, waitForTimeout: 800, priority: true });
       if (buf) await e.reply([segment.image(buf)]);
       else await e.reply('生成帮助截图失败，请稍后重试。');
     } catch (err) {
