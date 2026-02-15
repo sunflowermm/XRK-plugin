@@ -327,11 +327,15 @@ export function initializePluginList() {
   fs.mkdirSync(PLUGINS_DIR, { recursive: true });
 }
 
-// 执行命令
+// 执行命令（安装插件时会输出 git/pnpm 的 stdout/stderr 到日志）
 export function execCommand(command, options = {}) {
   return new Promise((resolve, reject) => {
     logger.info(`[插件安装器] 执行: ${command}`);
     exec(command, { shell: true, ...options }, (error, stdout, stderr) => {
+      const out = (stdout && String(stdout).trim()) || '';
+      const err = (stderr && String(stderr).trim()) || '';
+      if (out) logger.info(`[插件安装器] stdout: ${out}`);
+      if (err) logger.info(`[插件安装器] stderr: ${err}`);
       if (error) reject(error);
       else resolve({ stdout, stderr });
     });

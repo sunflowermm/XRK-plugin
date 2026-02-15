@@ -151,6 +151,10 @@ export class InstallPlugin extends plugin {
 
     const pluginNames = pluginNamesStr.split(/\s+/);
     isInstalling = true;
+    // 安装前预加载所有分类，确保 pluginData 含别名，支持 #安装插件 r 这类别名
+    for (const c of PLUGIN_CATEGORIES) {
+      getCategoryPlugins(c.name);
+    }
     logger.info(`[插件安装器] 开始安装插件：${pluginNames.join(', ')}`);
 
     const results = { installed: [], jsInstalled: [], failed: [] };
