@@ -1,12 +1,11 @@
 import fs from 'fs'
 import path from 'path'
 import {
-  pluginImageSegments,
   pluginData,
-  categoryPluginMap,
   PLUGIN_CATEGORIES,
   getCategoryByInput,
   ensureCategoryImageSegments,
+  getCategoryPlugins,
   createHtmlTemplate,
   saveAndScreenshot,
   downloadWithProxy,
@@ -50,10 +49,7 @@ export class InstallPlugin extends plugin {
         return;
       }
       const key = category.name;
-      const needGenerate = !pluginImageSegments[key]?.length;
-      if (needGenerate) await e.reply(`正在生成「${key}」列表，请稍候…`);
-      await ensureCategoryImageSegments(key);
-      const segments = pluginImageSegments[key];
+      const segments = await ensureCategoryImageSegments(key);
       if (!segments?.length) {
         await e.reply(`未找到分类：${categoryName}`);
         return;
@@ -62,16 +58,9 @@ export class InstallPlugin extends plugin {
       return;
     }
 
-    let categoriesToSend = Object.keys(pluginImageSegments);
-    if (categoriesToSend.length === 0) {
-      for (const c of PLUGIN_CATEGORIES) await ensureCategoryImageSegments(c.name);
-      categoriesToSend = Object.keys(pluginImageSegments);
-    }
-    for (const category of categoriesToSend) {
-      await ensureCategoryImageSegments(category);
-      if (pluginImageSegments[category]?.length) {
-        await BotUtil.makeChatRecord(e, pluginImageSegments[category], category);
-      }
+    for (const c of PLUGIN_CATEGORIES) {
+      const segments = await ensureCategoryImageSegments(c.name);
+      if (segments?.length) await BotUtil.makeChatRecord(e, segments, c.name);
     }
   }
 
@@ -84,8 +73,7 @@ export class InstallPlugin extends plugin {
         return;
       }
       const key = category.name;
-      await ensureCategoryImageSegments(key);
-      const plugins = categoryPluginMap[key];
+      const plugins = getCategoryPlugins(key);
       if (!plugins?.length) {
         await e.reply(`未找到分类：${categoryName}`);
         return;
@@ -94,16 +82,11 @@ export class InstallPlugin extends plugin {
       await BotUtil.makeChatRecord(e, messages, key);
       return;
     }
-    let categoriesToSend = Object.keys(categoryPluginMap);
-    if (categoriesToSend.length === 0) {
-      for (const c of PLUGIN_CATEGORIES) await ensureCategoryImageSegments(c.name);
-      categoriesToSend = Object.keys(categoryPluginMap);
-    }
-    for (const category of categoriesToSend) {
-      const plugins = categoryPluginMap[category];
+    for (const c of PLUGIN_CATEGORIES) {
+      const plugins = getCategoryPlugins(c.name);
       if (plugins?.length) {
         const messages = plugins.map(p => generateTextPluginInfo(p));
-        await BotUtil.makeChatRecord(e, messages, category);
+        await BotUtil.makeChatRecord(e, messages, c.name);
       }
     }
   }
@@ -124,6 +107,10 @@ export class InstallPlugin extends plugin {
     const content = pluginInfos.map(info => this.generatePluginHtml(info)).join('');
     const htmlContent = createHtmlTemplate('插件查询结果', content);
     const screenshotPath = await saveAndScreenshot(htmlContent, 'search_result');
+    if (!screenshotPath) {
+      await e.reply('截图生成失败，请稍后重试');
+      return;
+    }
     await e.reply(segment.image(screenshotPath));
   }
 

@@ -254,7 +254,7 @@ export class ManagePlugin extends plugin {
 
       const htmlContent = createHtmlTemplate(`${typeName}列表 - 第 ${index + 1} 组`, content);
       const screenshotPath = await saveAndScreenshot(htmlContent, `installed_${typePrefix}_group_${index + 1}`);
-      images.push(segment.image(screenshotPath));
+      if (screenshotPath) images.push(segment.image(screenshotPath));
     }
 
     if (images.length) await BotUtil.makeChatRecord(e, images, `🌻已安装${typeName}列表🌻`);
