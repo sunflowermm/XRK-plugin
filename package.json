@@ -1,8 +1,8 @@
 {
   "name": "xrk-plugin",
   "version": "2.0.0",
-  "author": "xrk114514",
-  "description": "entertainment",
+  "author": "xrkseek",
+  "description": "XRK-plugin",
   "main": "index.js",
   "type": "module"
 }
