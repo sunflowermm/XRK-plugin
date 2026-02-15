@@ -203,7 +203,11 @@ export class InstallPlugin extends plugin {
 
     if (results.installed.length > 0) {
       await e.reply('🔄 所有依赖安装完成，即将重启机器人...');
-      await restart(e, results.installed);
+      try {
+        await restart(e, results.installed);
+      } catch (_) {
+        // 静默忽略重启流程中的异常（如未配置主人QQ），不影响安装结果
+      }
     } else if (results.jsInstalled.length > 0) {
       await e.reply('✅ JS插件安装完成，无需重启');
     }
