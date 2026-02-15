@@ -8,6 +8,7 @@ import {
   getCategoryPlugins,
   createHtmlTemplate,
   saveAndScreenshot,
+  formatPluginItemHtml,
   downloadWithProxy,
   getGitCloneUrlWithProxy,
   switchPluginProxy,
@@ -104,7 +105,7 @@ export class InstallPlugin extends plugin {
       return;
     }
 
-    const content = pluginInfos.map(info => this.generatePluginHtml(info)).join('');
+    const content = pluginInfos.map(info => formatPluginItemHtml(info)).join('');
     const htmlContent = createHtmlTemplate('插件查询结果', content);
     const screenshotPath = await saveAndScreenshot(htmlContent, 'search_result');
     if (!screenshotPath) {
@@ -254,17 +255,6 @@ export class InstallPlugin extends plugin {
       }
     }
     return pluginInfos;
-  }
-
-  generatePluginHtml(pluginInfo) {
-    return `
-      <div class="plugin-item">
-        <h3>${pluginInfo.cn_name} (${pluginInfo.name})</h3>
-        <p><strong>插件介绍: </strong>${pluginInfo.description || ''}</p>
-        <p><strong>插件别名: </strong>${pluginInfo.anothername || '暂无'}</p>
-        <p><strong>项目地址：</strong><a href="${pluginInfo.git || pluginInfo.url}">${pluginInfo.git || pluginInfo.url}</a></p>
-      </div>
-    `;
   }
 
   findPluginInfo(name) {

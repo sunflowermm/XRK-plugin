@@ -4,12 +4,17 @@ import path from 'path'
 import fetch from 'node-fetch'
 import xrkconfig from './xrkconfig.js'
 
-/** 解析向日葵配置（统一走 xrkconfig） */
+/**
+ * 解析向日葵配置（统一走 xrkconfig，与 commonconfig/xrk.js 共用 data/xrkconfig/config.yaml）
+ */
 export function 解析向日葵插件yaml () {
   return xrkconfig.config || {}
 }
 
-/** 覆盖保存配置；若为 xrk 配置文件则委托 xrkconfig.save() 统一落盘 */
+/**
+ * 覆盖保存配置。
+ * 若 targetPath 与 xrkconfig 的配置文件一致，则委托 xrkconfig 写入，保证与 commonconfig 管理端、watch 重载一致。
+ */
 export function 保存yaml (targetPath, configObject) {
   try {
     const realPath = path.resolve(targetPath || xrkconfig.configPath)

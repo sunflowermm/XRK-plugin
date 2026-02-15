@@ -84,6 +84,7 @@ export const proxyList = [
     "https://www.ghproxy.cn"
 ];
 
+// 截图统一落盘：plugins/XRK-plugin/resources/plugins/*.png；分类列表缓存索引同目录 plugin_screenshots_index.json
 const PLUGINS_DIR = path.join(process.cwd(), 'plugins/XRK-plugin/resources/plugins');
 const PLUGIN_HTML_TEMPLATE = path.join(PLUGINS_DIR, 'template.html');
 const PLUGIN_SCREENSHOT_INDEX = path.join(PLUGINS_DIR, 'plugin_screenshots_index.json');
@@ -230,7 +231,7 @@ export async function updatePluginRemote(pluginPath, newRemote) {
 
 function readScreenshotIndex() {
   try {
-    if (typeof PLUGIN_SCREENSHOT_INDEX === "string" && fs.existsSync(PLUGIN_SCREENSHOT_INDEX))
+    if (fs.existsSync(PLUGIN_SCREENSHOT_INDEX))
       return JSON.parse(fs.readFileSync(PLUGIN_SCREENSHOT_INDEX, "utf8"));
   } catch (_) {}
   return {};
@@ -247,6 +248,18 @@ export function calculatePluginsHash(plugins) {
 
 export function generateTextPluginInfo(plugin) {
   return `━━━━━━━━━\n【${plugin.cn_name}】(${plugin.name})\n介绍:\n${plugin.description || '暂无'}\n别名:\n${plugin.anothername || '暂无'}\n地址:\n${plugin.git || plugin.url}\n━━━━━━━━━`;
+}
+
+/** 单条插件的 HTML 片段（列表/查询共用） */
+export function formatPluginItemHtml(pluginInfo) {
+  return `
+    <div class="plugin-item">
+      <h3>${pluginInfo.cn_name} (${pluginInfo.name})</h3>
+      <p><strong>插件介绍: </strong>${pluginInfo.description || ''}</p>
+      <p><strong>插件别名: </strong>${pluginInfo.anothername || '暂无'}</p>
+      <p><strong>项目地址：</strong><a href="${pluginInfo.git || pluginInfo.url}">${pluginInfo.git || pluginInfo.url}</a></p>
+    </div>
+  `;
 }
 
 export const PLUGIN_CATEGORIES = [
@@ -427,29 +440,17 @@ function updatePluginData(plugins) {
   });
 }
 
-/** 生成分类截图并写入 resources/plugins/*.png，返回文件名数组供索引 */
+/** 生成分类截图并写入 resources/plugins/*.png，返回文件名数组供索引（复用 saveAndScreenshot） */
 async function generatePluginImages(category, plugins) {
   const groups = [];
   for (let i = 0; i < plugins.length; i += 10) groups.push(plugins.slice(i, i + 10));
   const files = [];
   for (let [index, group] of groups.entries()) {
-    const content = group.map(p => `
-      <div class="plugin-item">
-        <h3>${p.cn_name} (${p.name})</h3>
-        <p><strong>插件介绍: </strong>${p.description || ''}</p>
-        <p><strong>插件别名: </strong>${p.anothername || '暂无'}</p>
-        <p><strong>项目地址：</strong><a href="${p.git || p.url}">${p.git || p.url}</a></p>
-      </div>
-    `).join('');
+    const content = group.map(p => formatPluginItemHtml(p)).join('');
     const baseName = `${category.file.replace(/\.json$/i, '')}_group_${index + 1}`;
     const htmlContent = createHtmlTemplate(`${category.name} - 第 ${index + 1} 组`, content);
-    const buf = await renderPluginListScreenshot(htmlContent, baseName, { waitForTimeout: 600 });
-    if (buf && Buffer.isBuffer(buf)) {
-      const fileName = `${baseName}.png`;
-      fs.mkdirSync(PLUGINS_DIR, { recursive: true });
-      fs.writeFileSync(path.join(PLUGINS_DIR, fileName), buf);
-      files.push(fileName);
-    }
+    const outPath = await saveAndScreenshot(htmlContent, baseName, { waitForTimeout: 600 });
+    if (outPath) files.push(path.basename(outPath));
   }
   return files;
 }

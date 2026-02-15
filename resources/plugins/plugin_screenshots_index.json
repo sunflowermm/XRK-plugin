@@ -5,5 +5,42 @@
       "recommended_plugins_group_1.png",
       "recommended_plugins_group_2.png"
     ]
+  },
+  "文娱插件": {
+    "hash": "46d3df3ef06ea350a41ca33d553d4918",
+    "files": [
+      "entertainment_plugins_group_1.png",
+      "entertainment_plugins_group_2.png",
+      "entertainment_plugins_group_3.png",
+      "entertainment_plugins_group_4.png",
+      "entertainment_plugins_group_5.png",
+      "entertainment_plugins_group_6.png"
+    ]
+  },
+  "IP类插件": {
+    "hash": "742736acbb7977dd4f06a61ac2fa86dc",
+    "files": [
+      "ip_plugins_group_1.png",
+      "ip_plugins_group_2.png"
+    ]
+  },
+  "游戏插件": {
+    "hash": "a2c1638e14f821a72f444b30ddb6c127",
+    "files": [
+      "game_plugins_group_1.png",
+      "game_plugins_group_2.png"
+    ]
+  },
+  "JS插件": {
+    "hash": "b696c13bad55621e9d0be02c2ce105ca",
+    "files": [
+      "js_group_1.png",
+      "js_group_2.png",
+      "js_group_3.png",
+      "js_group_4.png",
+      "js_group_5.png",
+      "js_group_6.png",
+      "js_group_7.png"
+    ]
   }
 }
