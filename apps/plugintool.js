@@ -323,6 +323,13 @@ export function getCategoryPlugins(categoryName) {
   return loadPluginsForCategory(category);
 }
 
+/** 预加载所有分类到 pluginData，便于安装/管理时用中文名、别名解析 */
+export function ensurePluginDataLoaded() {
+  for (const c of PLUGIN_CATEGORIES) {
+    getCategoryPlugins(c.name);
+  }
+}
+
 export function initializePluginList() {
   fs.mkdirSync(PLUGINS_DIR, { recursive: true });
 }

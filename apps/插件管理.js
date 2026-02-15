@@ -7,7 +7,8 @@ import {
   execCommand,
   pluginData,
   createHtmlTemplate,
-  saveAndScreenshot
+  saveAndScreenshot,
+  ensurePluginDataLoaded
 } from './plugintool.js';
 import BotUtil from '../../../lib/util.js';
 
@@ -31,6 +32,7 @@ export class ManagePlugin extends plugin {
 
   async listInstalledPlugins(e) {
     if (!e.isMaster) return;
+    ensurePluginDataLoaded();
     const { pluginList } = getInstalledPlugins();
     await e.reply([
       `共 ${pluginList.length} 个插件\n`,
@@ -46,6 +48,7 @@ export class ManagePlugin extends plugin {
 
   async listInstalledPluginsText(e) {
     if (!e.isMaster) return;
+    ensurePluginDataLoaded();
     const { pluginList } = getInstalledPlugins();
     const messages = [
       `共 ${pluginList.length} 个插件`,
@@ -77,6 +80,7 @@ export class ManagePlugin extends plugin {
 
   async deletePlugin(e) {
     if (!e.isMaster) return;
+    ensurePluginDataLoaded();
     const inputStr = e.msg.match(/^#?(?:删除|删|卸载)插件\s*(.+)$/)[1]?.trim();
     if (!inputStr) {
       await e.reply('请指定要删除的插件，例如：#删除插件 1 2');
@@ -117,6 +121,7 @@ export class ManagePlugin extends plugin {
 
   async confirmDeletePlugin(e) {
     if (!e.isMaster) return;
+    ensurePluginDataLoaded();
     const inputStr = e.msg.match(/^#?确认(?:删除|删|卸载)插件\s*(.+)$/)[1]?.trim();
     if (!inputStr) {
       await e.reply('请指定要确认删除的插件，例如：#确认删除插件 1 2');
@@ -150,6 +155,7 @@ export class ManagePlugin extends plugin {
 
   async disablePlugin(e) {
     if (!e.isMaster) return;
+    ensurePluginDataLoaded();
     const inputStr = e.msg.match(/^#?(?:停用|禁用)插件\s*(.+)$/)[1]?.trim();
     if (!inputStr) {
       await e.reply('请指定要停用的插件，例如：#停用插件 1 2');
@@ -192,6 +198,7 @@ export class ManagePlugin extends plugin {
 
   async enablePlugin(e) {
     if (!e.isMaster) return;
+    ensurePluginDataLoaded();
     const inputStr = e.msg.match(/^#?(?:启用|开启)插件\s*(.+)$/)[1]?.trim();
     if (!inputStr) {
       await e.reply('请指定要启用的插件，例如：#启用插件 1 2');
@@ -261,9 +268,13 @@ export class ManagePlugin extends plugin {
   }
 
   getPluginInfo(name) {
-    return pluginData[name] || Object.values(pluginData).find(p => 
-      p.name === name || 
-      (p.anothername && p.anothername.split('|').includes(name))
+    const byKey = pluginData[name];
+    if (byKey) return byKey;
+    const splitAlias = (s) => (s || '').split(/\s*\|\s*|\s+/).filter(Boolean);
+    return Object.values(pluginData).find(p =>
+      p.name === name ||
+      p.cn_name === name ||
+      (p.anothername && splitAlias(p.anothername).some(alias => alias.toLowerCase() === (name || '').toLowerCase()))
     );
   }
 
@@ -303,9 +314,10 @@ export class ManagePlugin extends plugin {
   }
 
   findPluginByAlias(alias) {
-    return Object.values(pluginData).find(p => 
-      p.anothername && p.anothername.split('|').some(name => 
-        name.toLowerCase() === alias.toLowerCase()
+    const splitAlias = (s) => (s || '').split(/\s*\|\s*|\s+/).filter(Boolean);
+    return Object.values(pluginData).find(p =>
+      p.anothername && splitAlias(p.anothername).some(name =>
+        name.toLowerCase() === (alias || '').toLowerCase()
       )
     );
   }

@@ -160,30 +160,57 @@ export class InstallPlugin extends plugin {
     }
 
     const pluginNames = pluginNamesStr.split(/\s+/);
-    isInstalling = true;
-    // 安装前预加载所有分类，确保 pluginData 含别名，支持 #安装插件 r 这类别名
+    // 安装前预加载所有分类，确保 pluginData 含别名
     for (const c of PLUGIN_CATEGORIES) {
       getCategoryPlugins(c.name);
     }
-    logger.info(`[插件安装器] 开始安装插件：${pluginNames.join(', ')}`);
 
-    const results = { installed: [], jsInstalled: [], failed: [], skipped: [] };
-    await e.reply('📦 开始安装插件...');
+    // 预检查：区分「未找到 / 已安装 / 待安装」，避免已安装时仍回复「开始安装」
+    const toInstall = [];
+    const alreadyInstalled = [];
+    const notFound = [];
 
     for (const name of pluginNames) {
       const pluginInfo = this.findPluginInfo(name);
       if (!pluginInfo) {
-        await e.reply(`❌ 未找到插件：${name}`);
+        notFound.push(name);
         continue;
       }
-
       const isJsPlugin = pluginInfo.git?.endsWith('.js');
       const pluginDirPath = path.join(process.cwd(), 'plugins', isJsPlugin ? 'example' : '', pluginInfo.name);
-
       if (fs.existsSync(pluginDirPath)) {
-        results.skipped.push(pluginInfo.cn_name || pluginInfo.name);
-        continue;
+        alreadyInstalled.push(pluginInfo.cn_name || pluginInfo.name);
+      } else {
+        toInstall.push(pluginInfo);
       }
+    }
+
+    if (notFound.length === pluginNames.length) {
+      await e.reply(`❌ 未找到插件：${notFound.join(', ')}`);
+      return;
+    }
+    if (notFound.length > 0) {
+      await e.reply(`❌ 未找到插件：${notFound.join(', ')}`);
+    }
+
+    // 全部已安装：直接友好提示，不进入安装流程、不回复「开始安装」
+    if (toInstall.length === 0) {
+      await e.reply(`✅ 以下插件已安装，无需重复安装：\n  - ${alreadyInstalled.join('\n  - ')}`);
+      return;
+    }
+
+    isInstalling = true;
+    if (alreadyInstalled.length > 0) {
+      await e.reply(`ℹ️ 以下插件已安装，将跳过：\n  - ${alreadyInstalled.join('\n  - ')}`);
+    }
+    logger.info(`[插件安装器] 开始安装插件：${toInstall.map(p => p.cn_name || p.name).join(', ')}`);
+    await e.reply('📦 开始安装插件...');
+
+    const results = { installed: [], jsInstalled: [], failed: [], skipped: alreadyInstalled };
+
+    for (const pluginInfo of toInstall) {
+      const isJsPlugin = pluginInfo.git?.endsWith('.js');
+      const pluginDirPath = path.join(process.cwd(), 'plugins', isJsPlugin ? 'example' : '', pluginInfo.name);
 
       await e.reply(`⏳ 正在安装${isJsPlugin ? ' JS ' : ' '}插件：${pluginInfo.cn_name}\n🔗 源地址：${pluginInfo.git}`);
       try {
