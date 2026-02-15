@@ -86,9 +86,14 @@ export const proxyList = [
     "https://www.ghproxy.cn"
 ];
 
-// 缓存配置
+// 缓存配置（主文件仅存 hash/timestamp，各分类截图单独文件避免 JSON 过大）
 export const CACHE_FILE_PATH = path.join(process.cwd(), 'plugins/XRK-plugin/resources/cache/plugin_cache.json');
 export const CACHE_DIR = path.join(process.cwd(), 'plugins/XRK-plugin/resources/cache');
+
+function getCategoryCachePath(category) {
+  const safe = (category?.file || String(category)).replace(/\.json$/, '');
+  return path.join(CACHE_DIR, `plugin_cache_${safe}.json`);
+}
 
 const PLUGIN_HTML_TEMPLATE = path.join(process.cwd(), 'plugins/XRK-plugin/resources/plugins/template.html');
 const PLUGIN_HTML_OUTPUT_DIR = path.join(process.cwd(), 'plugins/XRK-plugin/resources/help_other');
@@ -218,8 +223,40 @@ export function readCache() {
   return null;
 }
 
+/** 读取某分类的截图缓存（单独文件，避免主缓存 JSON 过大导致 Invalid string length） */
+function readCategoryCache(category) {
+  const p = getCategoryCachePath(category);
+  if (!fs.existsSync(p)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
 export function saveCache(pluginsList, imagePathMap = {}) {
-  fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify({ plugins: pluginsList, imagePaths: imagePathMap, timestamp: Date.now() }, null, 2));
+  const light = {
+    plugins: {},
+    imagePaths: imagePathMap,
+    timestamp: Date.now()
+  };
+  for (const [catName, data] of Object.entries(pluginsList || {})) {
+    light.plugins[catName] = { hash: data.hash, timestamp: data.timestamp };
+    const category = PLUGIN_CATEGORIES.find(c => c.name === catName);
+    if (category && data.imageSegments != null) {
+      try {
+        const payload = JSON.stringify({ hash: data.hash, imageSegments: data.imageSegments, timestamp: data.timestamp ?? Date.now() }, null, 2);
+        fs.writeFileSync(getCategoryCachePath(category), payload);
+      } catch (err) {
+        if (err?.name === 'RangeError' && /string length|Invalid/.test(String(err.message))) {
+          logger?.warn?.(`[插件安装器] 分类 ${catName} 截图缓存过大，仅保留 hash 缓存`);
+        } else {
+          logger?.error?.(`[插件安装器] 写入分类缓存失败 ${catName}: ${err.message}`);
+        }
+      }
+    }
+  }
+  fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify(light, null, 2));
 }
 
 export function calculatePluginsHash(plugins) {
@@ -270,9 +307,10 @@ export async function initializePluginList() {
     const plugins = JSON.parse(fs.readFileSync(pluginsPath, 'utf8'));
     const currentHash = calculatePluginsHash(plugins);
     const cached = cache?.plugins?.[category.name];
+    const segments = cached?.imageSegments ?? readCategoryCache(category)?.imageSegments;
 
-    if (cached?.hash === currentHash && imageSegmentsValid(cached.imageSegments)) {
-      pluginImageSegments[category.name] = cached.imageSegments;
+    if (cached?.hash === currentHash && segments != null && imageSegmentsValid(segments)) {
+      pluginImageSegments[category.name] = segments;
       updatePluginData(plugins);
       categoryPluginMap[category.name] = plugins;
       continue;
@@ -284,7 +322,7 @@ export async function initializePluginList() {
 
     const cacheData = cache || { plugins: {}, imagePaths: {} };
     cacheData.plugins[category.name] = { hash: currentHash, imageSegments: pluginImageSegments[category.name], timestamp: Date.now() };
-    saveCache(cacheData.plugins, cacheData.imagePaths);
+    saveCache(cacheData.plugins, cacheData.imagePaths ?? {});
   }
 }
 
