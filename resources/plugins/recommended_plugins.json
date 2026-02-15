@@ -21,6 +21,13 @@
         "git": "https://gitee.com/TimeRainStarSky/TRSS-Plugin"
     },
     {
+        "name": "fengyun-plugin",
+        "cn_name": "风云插件",
+        "anothername": "fengyun fy 风 风云 风云插件",
+        "description": "提供了机器人的网页截图",
+        "git": "https://gitcode.com/fengyunnb_admin/fengyun-plugin"
+    },
+    {
         "name": "guoba-plugin",
         "cn_name": "锅巴插件",
         "anothername": "锅巴 guoba",
@@ -96,5 +103,19 @@
         "anothername": "神金中国移动 kkk 视频解析 kkkkkk 10086",
         "description": "视频解析",
         "git": "https://github.com/ikenxuan/kkkkkk-10086"
+    },
+    {
+        "name": "xiaofei-plugin",
+        "cn_name": "小飞插件",
+        "anothername": "小飞 xiaofei 小飞插件",
+        "description": "提供点歌",
+        "git": "https://gitee.com/xfdown/xiaofei-plugin"
+    },
+    {
+        "name": "Packet-plugin",
+        "cn_name": "发包插件",
+        "anothername": "发包 Packet pb",
+        "description": "为对接NapCat.OneBot的BOT提供发送ProtoBuf包的能力，内置了发送按钮的能力。",
+        "git": "https://gitee.com/HDTianRu/Packet-plugin"
     }
 ]

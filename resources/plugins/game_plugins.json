@@ -94,5 +94,12 @@
         "anothername": "咸鱼 xianyu",
         "description": "一些群聊对战小游戏，没有文游的复杂体系，休闲娱乐，老少皆宜。",
         "git": "https://gitee.com/suancaixianyu/xianyu-plugin"
+    },
+    {
+        "name": "ai-plugin",
+        "cn_name": "风云AI",
+        "anothername": "风云ai ai",
+        "description": "由风云提供的AI插件。",
+        "git": "https://gitcode.com/fengyunnb_admin/ai"
     }
 ]

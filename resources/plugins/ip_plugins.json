@@ -130,5 +130,12 @@
     "anothername": "光遇",
     "description": "可查询每日任务等。",
     "git": "https://gitee.com/Tloml-Starry/Tlon-Sky"
+  },
+  {
+    "name": "guoshen-plugin",
+    "cn_name": "钓鱼插件",
+    "anothername": "果神 guoshen 钓鱼插件 钓鱼",
+    "description": "由风云提供的钓鱼插件。",
+    "git": "https://gitcode.com/fengyunnb_admin/guoshen-plugin"
   }
 ]
