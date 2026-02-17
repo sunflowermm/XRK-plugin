@@ -1,0 +1,52 @@
+# XRK-Plugin .gitignore
+# 忽略动态生成的数据和截图文件
+
+# 截图文件（动态生成）
+resources/plugins/*.png
+resources/plugins/*.jpg
+resources/plugins/*.jpeg
+resources/plugins/*.gif
+resources/plugins/*.webp
+
+# 截图索引文件（动态生成）
+resources/plugins/plugin_screenshots_index.json
+
+# 临时 HTML 文件（动态生成）
+resources/help_other/*.html
+resources/help_other/*.htm
+
+# 用户配置文件（包含个人设置）
+config/*.json
+!config/*.example.json
+
+# 缓存文件
+*.cache
+*.tmp
+*.temp
+
+# 日志文件
+*.log
+*.log.*
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 其他临时文件
+*.bak
+*.backup
+*.old

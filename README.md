@@ -29,33 +29,7 @@
 
 ## 🚀 安装与使用
 
-### 环境要求
-
-- 已安装并运行 **XRK-Yunzai**（Node.js 18+）
-- 插件目录：将本仓库放在 `XRK-Yunzai/plugins/XRK-plugin`，或通过主项目「安装插件」等方式拉取
-
-### 依赖
-
-部分功能依赖以下 npm 包，缺失时启动会提示：
-
-| 依赖 | 用途 |
-|------|------|
-| axios | 网络请求（天气、早报等） |
-| uuid | 唯一标识 |
-| form-data | 表单上传 |
-| node-schedule | 定时任务（整点报时等） |
-| sqlite | 本地数据（若启用） |
-
-在项目根目录执行：
-
-```bash
-pnpm add axios uuid form-data node-schedule -w
-# 或 npm install axios uuid form-data node-schedule -w
-```
-
-### 首次使用
-
-启动 XRK-Yunzai 后，插件会自动加载。按各功能触发词或主人设置进行配置即可。
+- 需已运行 **XRK-Yunzai**（Node.js 18+）。在项目内发送「向日葵妈咪妈咪哄」或「#向日葵妈咪妈咪哄」自动下载/更新本插件及原神适配器（GitCode 失败会切 GitHub）。QQ 需主人权限；终端/stdin、Web 控制台、API 默认主人。**无需打依赖**，跟本体依赖即可。启动后插件自动加载，按触发词或主人设置配置即可。
 
 ---
 
