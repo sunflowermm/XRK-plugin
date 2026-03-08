@@ -11,6 +11,7 @@ import {
   ensurePluginDataLoaded
 } from './plugintool.js';
 import BotUtil from '../../../lib/util.js';
+
 export class ManagePlugin extends plugin {
   constructor() {
     super({
