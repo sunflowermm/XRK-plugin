@@ -2,11 +2,10 @@ import plugin from '../../../lib/plugins/plugin.js';
 import moment from 'moment';
 import fs from 'fs';
 import path from 'path';
-import xrkconfig from '../components/xrkconfig.js';
-
+import xrkconfig from '../lib/xrkconfig.js';
+import { readConfigSync } from '../lib/config-paths.js';
 const ROOT_PATH = process.cwd();
 const PLUGIN_PATH = path.join(ROOT_PATH, 'plugins/XRK-plugin');
-const TIME_CONFIG_PATH = path.join(PLUGIN_PATH, 'config/time_config.json');
 const IMAGE_DIR_PATH = path.join(PLUGIN_PATH, 'resources/emoji/整点报时图库');
 
 export class WhitelistManager extends plugin {
@@ -27,11 +26,9 @@ export class WhitelistManager extends plugin {
   }
 
   loadTimeConfig() {
-    try {
-      return JSON.parse(fs.readFileSync(TIME_CONFIG_PATH, 'utf8'));
-    } catch {
-      return { emojis: [], timeMessages: [] };
-    }
+    const raw = readConfigSync('time_config', 'json');
+    if (raw && typeof raw === 'object') return raw;
+    return { emojis: [], timeMessages: [] };
   }
 
   getRandomItem(array) {
@@ -95,6 +92,7 @@ export class WhitelistManager extends plugin {
   }
 
   async hourlyNotification() {
+    this.timeConfig = this.loadTimeConfig();
     const groupList = xrkconfig.time_groupss;
     if (!groupList?.length) return;
     const currentHour = moment().hour();

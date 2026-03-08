@@ -1,5 +1,5 @@
 # XRK-Plugin .gitignore
-# config/（除 *.json 外）、resources/（除下方动态生成项外）可提交，更新时受保护不覆盖
+# 忽略动态生成的数据和截图文件
 
 # 截图文件（动态生成）
 resources/plugins/*.png

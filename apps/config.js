@@ -1,5 +1,5 @@
 import plugin from '../../../lib/plugins/plugin.js';
-import xrkconfig from '../components/xrkconfig.js';
+import xrkconfig from '../lib/xrkconfig.js';
 import BotUtil from '../../../lib/util.js';
 
 export class XrkSettings extends plugin {
@@ -16,7 +16,6 @@ export class XrkSettings extends plugin {
         { reg: '^#?(向日葵|xrk)修改戳一戳主人优先级(.*)$', fnc: 'setChuoMasterPriority' },
         { reg: '^#?(向日葵|xrk)(开启|关闭)戳一戳主人(.*)$', fnc: 'toggleChuoMaster' },
         { reg: '^#?(向日葵|xrk)修改渲染精度(.*)$', fnc: 'setRenderQuality' },
-        { reg: '^#?(开启|关闭)(向日葵|xrk)?签名监测$', fnc: 'toggleSignChecker' },
         { reg: '^#?(向日葵|xrk)(开启|关闭)网页截图$', fnc: 'toggleScreenshot' },
         { reg: '^#?(向日葵|xrk)(开启|关闭)资源$', fnc: 'toggleSharing' }
       ]
@@ -49,7 +48,6 @@ export class XrkSettings extends plugin {
       `❯ 向日葵人工AI状态: ${c.peopleai ? '✅已开启' : '❌已关闭'}\n└─ 发送\n【开启/关闭向日葵ai】\n来更改设置`,
       `❯ 帮助优先级: ${c.help_priority}\n└─ 发送\n【#向日葵修改帮助优先级xxx】\n来更改(支持正负整数)`,
       `❯ 渲染精度: ${c.screen_shot_quality}\n└─ 发送\n【#向日葵修改渲染精度x.xx】\n来更改(1-3之间，支持两位小数)`,
-      `❯ 签名监测: ${c.signchecker ? '✅已开启' : '❌已关闭'}\n└─ 发送\n【开启/关闭向日葵签名监测】\n来更改设置`,
       `❯ 网页截图: ${c.screen_shot_http ? '✅已开启' : '❌已关闭'}\n└─ 发送\n【#向日葵开启/关闭网页截图】\n来更改设置`,
       `❯ 资源分享: ${c.sharing ? '✅已开启' : '❌已关闭'}\n└─ 发送\n【#向日葵开启/关闭资源】\n来更改设置`
     ].join('\n'));
@@ -57,8 +55,8 @@ export class XrkSettings extends plugin {
     messages.push('【推送设置】');
     messages.push([
       `❯ 整点报时推送群:\n${(c.time_groupss?.length > 0 ? c.time_groupss.map(g => `└─ ${g}`).join('\n') : '└─ 暂无白名单群')}\n发送\n【整点报时添加/删除白名单】\n来更改设置`,
-      `❯ 早报推送群:\n${(c.news_groupss?.length > 0 ? c.news_groupss.map(g => `└─ ${g}`).join('\n') : '└─ 暂无白名单群')}\n发送\n【早报添加/删除白名单】\n来更改设置`,
-      `❯ 早报推送时间: ${c.news_pushtime}点\n└─ 发送\n【#修改早报推送时间xxx】\n来更改设置`
+      `❯ 早报推送群:\n${(c.news_groupss?.length > 0 ? c.news_groupss.map(g => `└─ ${g}`).join('\n') : '└─ 暂无白名单群')}\n发送\n【#早报添加白名单】或【#早报删除白名单】\n来更改设置`,
+      `❯ 早报推送时间: ${c.news_pushtime}点\n└─ 发送\n【#修改早报推送时间8】\n来更改(0-23)`
     ].join('\n'));
 
     messages.push('【权限设置】');
@@ -134,13 +132,6 @@ export class XrkSettings extends plugin {
     }
     xrkconfig.set('screen_shot_quality', quality);
     await e.reply(`✅ 渲染精度已修改为: ${quality}`);
-  }
-
-  async toggleSignChecker(e) {
-    if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
-    const isEnable = e.msg.includes('开启');
-    xrkconfig.set('signchecker', isEnable);
-    await e.reply(`✅ 签名监测已${isEnable ? '开启' : '关闭'}`);
   }
 
   async toggleScreenshot(e) {

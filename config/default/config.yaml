@@ -1,0 +1,72 @@
+# 向日葵插件主配置（标准模板，首次运行复制到 data/xrkconfig/config.yaml）
+# 用户编辑 data/xrkconfig 下的文件，本文件仅作默认值来源
+#
+help_priority: 500          # 帮助优先级（数值越大优先级越高）
+sharing: true               # 是否开启向日葵资源相关功能展示
+screen_shot_http: false     # 是否开启网页截图总开关
+peopleai: false             # 是否开启人工 AI 词库回复
+screen_shot_quality: 1.5    # 网页截图渲染精度（deviceScaleFactor，1-3）
+news_pushtime: 8            # 早报推送时间（小时，0-23）
+news:                       # 早报扩展（可选）
+  delay: 1000               # 群间推送间隔（毫秒）
+coremaster: 0               # 核心主人 QQ（用于权限判断等）
+emoji_filename: 孤独摇滚   # 全局表情目录名（resources/emoji 下子目录）
+time_groupss: []            # 整点报时推送群号列表
+news_groupss: []            # 早报推送群号列表
+thumwhiteList: []           # 骗赞白名单群号列表
+poke_priority: -5000        # 戳一戳优先级
+corepoke_priority: -5000    # 戳一戳主人优先级
+chuomaster: false           # 是否启用“戳一戳主人”特殊逻辑
+
+poke:                       # 戳一戳详细设置
+  enabled: true             # 是否启用戳一戳系统
+  priority: -5000           # 戳一戳整体优先级
+  modules:                  # 功能模块开关
+    daily_rewards: true     # 每日首戳/连续签到
+    festival: true          # 节日效果
+    basic: true             # 基础回复
+    mood: true              # 心情系统
+    intimacy: true          # 亲密度系统
+    achievement: true       # 成就系统
+    special: true           # 特效回复
+    punishment: true        # 惩罚逻辑
+    pokeback: true          # 戳回去
+    image: true             # 图片回复
+    voice: true             # 语音回复
+    master: true            # 主人专属逻辑
+  pokeback_enabled: true    # 是否允许戳回去
+  image_chance: 0.3         # 图片回复概率
+  voice_chance: 0.2         # 语音回复概率
+  basic_reply_chance: 0.6   # 基础回复基准概率
+  pokeback_base_chance: 0.3 # 反戳基准概率
+  module_skip_chance: 0.3   # 模块成功后跳过后续模块的概率（0-1）
+  paths:                    # 资源路径覆盖（留空则用默认）
+    image_dir: ""          # 戳一戳图片目录，默认 plugins/XRK-plugin/resources/emoji/戳一戳表情
+    voice_dir: ""          # 戳一戳语音目录，默认 plugins/XRK-plugin/resources/voice
+  time_slots:               # 时段划分（小时，可覆盖默认）
+    morning: [5, 9]         # 早晨 5-9
+    noon: [11, 14]          # 中午 11-14
+    afternoon: [14, 17]     # 下午 14-17
+    evening: [17, 20]       # 傍晚 17-20
+    night: [22, 3]         # 夜晚 22-3（次日）
+    dawn: [3, 5]            # 凌晨 3-5
+  master_image: true        # 主人可触发图片
+  master_punishment: true   # 主人可触发惩罚
+  master_chances:           # 主人惩罚概率（戳主人时）
+    mute: 0.5               # 禁言基准概率（×惩罚等级）
+    pokeback: 0.7           # 反戳概率
+  cooldowns:                # 冷却时间（毫秒）
+    interaction: 30000      # 互动冷却
+    special_effect: 180000  # 特效冷却
+    punishment: 60000       # 惩罚冷却
+  chances:                  # 触发概率（0-1）
+    mood_change: 0.2        # 心情变化概率
+    mood_reply: 0.5         # 心情变化时额外回复概率
+    special_trigger: 0.15   # 时段/特效触发概率
+    special_effect_extra: 0.1  # 幸运/暴击等特效（亲密度>50）概率
+    punishment: 0.3         # 惩罚触发概率
+    mute_chance: 0.5        # 惩罚时禁言 vs 扣亲密度 概率
+    daily_first: 0.6        # 今日首戳奖励概率
+    daily_continuous: 0.25  # 连续签到奖励概率
+    festival: 0.15          # 节日效果概率
+

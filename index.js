@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
-import xrkconfig from './components/xrkconfig.js';
+import xrkconfig from './lib/xrkconfig.js';
 
 // ========== 检查依赖是否缺失 ==========
 async function checkDependencies() {

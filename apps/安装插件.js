@@ -177,7 +177,7 @@ export class InstallPlugin extends plugin {
         continue;
       }
       const isJsPlugin = pluginInfo.git?.endsWith('.js');
-      const pluginDirPath = path.join(process.cwd(), 'plugins', isJsPlugin ? 'example' : '', pluginInfo.name);
+      const pluginDirPath = path.join(process.cwd(), 'plugins', isJsPlugin ? 'other' : '', pluginInfo.name);
       if (fs.existsSync(pluginDirPath)) {
         alreadyInstalled.push(pluginInfo.cn_name || pluginInfo.name);
       } else {
@@ -210,7 +210,7 @@ export class InstallPlugin extends plugin {
 
     for (const pluginInfo of toInstall) {
       const isJsPlugin = pluginInfo.git?.endsWith('.js');
-      const pluginDirPath = path.join(process.cwd(), 'plugins', isJsPlugin ? 'example' : '', pluginInfo.name);
+      const pluginDirPath = path.join(process.cwd(), 'plugins', isJsPlugin ? 'other' : '', pluginInfo.name);
 
       await e.reply(`⏳ 正在安装${isJsPlugin ? ' JS ' : ' '}插件：${pluginInfo.cn_name}\n🔗 源地址：${pluginInfo.git}`);
       try {

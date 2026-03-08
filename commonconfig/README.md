@@ -1,21 +1,40 @@
-# 向日葵 commonconfig
+# 向日葵 CommonConfig
 
-本目录由框架 **lib/commonconfig/loader.js** 在启动时扫描加载，用于在通用配置管理端展示与编辑向日葵插件配置。
+本目录由框架 **lib/commonconfig/loader.js** 扫描加载，用于 Web 配置管理端展示与编辑。
 
-## 加载规则
+## 配置体系
 
-- 仅加载 `.js` 文件，且模块需 **default 导出**为 `ConfigBase` 子类（或其实例）。
-- 配置在管理端中的 **key** = `插件目录名_文件名`，例如 `xrk.js` → **XRK-plugin_xrk**。
-- 每个配置类需实现 **getStructure()**（由 ConfigBase 提供，返回 name、displayName、schema 等），供前端渲染表单。
+- **标准模板**：`config/default/`（只读）。启动时 `lib/config-paths.js` 的 `ensureAllConfigsSync()` 将 default 下文件复制到 `data/xrkconfig/`（仅缺则复制）。
+- **用户配置**：仅编辑 `data/xrkconfig/`，与模板隔离。
 
-## 与 components/xrkconfig 的关系
+## 本目录文件
 
-- **commonconfig/xrk.js**：定义 schema 与文件路径 `data/xrkconfig/config.yaml`，供管理端读/写/恢复默认。
-- **components/xrkconfig.js**：插件运行时单例，读写同一文件，供各 app 通过 `xrkconfig.xxx`、`get/set` 使用。
-- 管理端通过 ConfigBase 写入文件后，xrkconfig 的 `fs.watch` 会检测到变更并自动 `load()`，两边无需额外同步。
+| 文件 | 管理端 key | 子配置 |
+|------|------------|--------|
+| xrk.js | xrk | config、help_system、ai、poke_responses、time_config、screenshot、recommended_plugins、entertainment_plugins、game_plugins、ip_plugins、js_plugins |
 
-## 新增配置项
+采用多文件模式（对齐 system.js），点击「向日葵配置」后选择子配置进行编辑。
 
-1. 在 **commonconfig/xrk.js** 的 `schema.fields` 中增加字段（含 type、label、default、component 等）。
-2. 在 **components/xrkconfig.js** 的 `getDefaultConfig()` 中增加相同 key 的默认值。
-3. 若需通过 `xrkconfig.xxx` 访问，在 xrkconfig.js 中增加对应 getter。
+## 子配置说明
+
+| 子配置 | 文件 | 说明 |
+|--------|------|------|
+| config | config.yaml | 主配置：帮助优先级、资源分享、戳一戳开关等 |
+| help_system | help_system.yaml | 帮助菜单标题、样式、分组列表 |
+| ai | ai.json | 词库 AI（消息 → 回复列表） |
+| poke_responses | poke_responses.json | 戳一戳文案池 |
+| time_config | time_config.json | 整点报时表情与文案池 |
+| screenshot | screenshot.yaml | 网页截图：URL 过滤策略与截图参数 |
+| recommended_plugins | recommended_plugins.json | 安装插件：推荐插件列表 |
+| entertainment_plugins | entertainment_plugins.json | 安装插件：文娱类插件列表 |
+| game_plugins | game_plugins.json | 安装插件：游戏类插件列表 |
+| ip_plugins | ip_plugins.json | 安装插件：IP相关插件列表 |
+| js_plugins | js_plugins.json | 安装插件：单文件JS插件列表 |
+
+## 与运行时关系
+
+- **config** 与 **lib/xrkconfig.js** 共用 `data/xrkconfig/config.yaml`。
+- **help_system** 与 **lib/help_system.js** 共用 `data/xrkconfig/help_system.yaml`。
+- **ai**、**poke_responses**、**time_config** 由各 app 读取 `data/xrkconfig/*.json`。
+- **screenshot** 由 `apps/web_screenshot.js` 读取 `data/xrkconfig/screenshot.yaml`。
+- **插件列表** 由 `lib/plugin-lists.js` 提供路径与读取接口，模板在 `config/default/`。

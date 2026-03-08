@@ -1,21 +1,18 @@
 import plugin from "../../../lib/plugins/plugin.js";
-import fs from "fs";
 import path from "path";
+import { FileUtils } from "../../../lib/utils/file-utils.js";
+import { XRK_CONFIG_DIR } from "../lib/config-paths.js";
 
-const GLOBAL_SETTINGS_PATH = path.join(process.cwd(), '/plugins/XRK-plugin/config/group-settings');
+const GLOBAL_SETTINGS_PATH = path.join(XRK_CONFIG_DIR, 'group-settings');
 
-if (!fs.existsSync(GLOBAL_SETTINGS_PATH)) {
-    fs.mkdirSync(GLOBAL_SETTINGS_PATH, { recursive: true });
-}
+FileUtils.ensureDirSync(GLOBAL_SETTINGS_PATH);
 
 export async function getGroupSettings(groupId) {
     const filePath = path.join(GLOBAL_SETTINGS_PATH, `${groupId}.json`);
+    if (!FileUtils.existsSync(filePath)) return { probability: 0 };
     try {
-        if (!fs.existsSync(filePath)) {
-            return { probability: 0 };
-        }
-        const data = await fs.promises.readFile(filePath, 'utf8');
-        return JSON.parse(data);
+        const raw = FileUtils.readFileSync(filePath);
+        return raw ? JSON.parse(raw) : { probability: 0 };
     } catch (error) {
         console.error('读取群设置时出错:', error);
         return { probability: 0 };
@@ -25,7 +22,7 @@ export async function getGroupSettings(groupId) {
 export async function updateGroupSettings(groupId, data) {
     const filePath = path.join(GLOBAL_SETTINGS_PATH, `${groupId}.json`);
     try {
-        await fs.promises.writeFile(filePath, JSON.stringify(data), 'utf8');
+        FileUtils.writeFileSync(filePath, JSON.stringify(data, null, 2));
     } catch (error) {
         console.error('写入群设置时出错:', error);
     }
@@ -57,7 +54,7 @@ export class GlobalEmojiSettingsPlugin extends plugin {
 
     async enableGlobalEmoji(e) {
         if (!e.isMaster) return;
-        const groupId = this.e.group_id;
+        const groupId = e.group_id;
         const settings = { probability: 0.1 };
         await updateGroupSettings(groupId, settings);
         await e.reply('全局表情已开启，触发概率为10%', false, { recallMsg: 5 });
@@ -65,7 +62,7 @@ export class GlobalEmojiSettingsPlugin extends plugin {
 
     async disableGlobalEmoji(e) {
         if (!e.isMaster) return;
-        const groupId = this.e.group_id;
+        const groupId = e.group_id;
         const settings = await getGroupSettings(groupId);
         settings.probability = 0;
         await updateGroupSettings(groupId, settings);
@@ -74,7 +71,7 @@ export class GlobalEmojiSettingsPlugin extends plugin {
 
     async setGlobalEmojiProbability(e) {
         if (!e.isMaster) return;
-        const groupId = this.e.group_id;
+        const groupId = e.group_id;
         const match = e.msg.match(/^#设置全局表情概率(\d+(?:\.\d+)?)$/);
         if (match) {
             const newProbability = parseFloat(match[1]);

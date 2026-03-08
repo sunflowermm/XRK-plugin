@@ -1,28 +1,34 @@
 import cfg from '../../../lib/config/config.js'
 import common from '../../../lib/common/common.js'
-import xrkcfg from '../components/xrkconfig.js'
+import xrkcfg from '../lib/xrkconfig.js';
 import fs from 'fs'
 import path from 'path'
 import fetch from 'node-fetch'
-
+import { FileUtils } from '../../../lib/utils/file-utils.js'
+import { getConfigPath, readConfigSync } from '../lib/config-paths.js'
 const ROOT_PATH = process.cwd()
-const RESPONSES_PATH = path.join(ROOT_PATH, 'plugins/XRK-plugin/config/poke_responses.json')
-const IMAGE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/emoji/戳一戳表情')
-const VOICE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/voice')
+const DEFAULT_IMAGE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/emoji/戳一戳表情')
+const DEFAULT_VOICE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/voice')
 
-// 加载响应配置
-let responses = {}
-try {
-  if (fs.existsSync(RESPONSES_PATH)) {
-    responses = JSON.parse(fs.readFileSync(RESPONSES_PATH, 'utf8'))
-  } else {
-    logger.warn('[戳一戳] 响应文件不存在，使用默认响应')
-    responses = { relationship: { stranger: ["戳什么戳！"] }, mood: {}, achievements: {} }
-  }
-} catch (e) {
-  logger.error('[戳一戳] 响应文件加载失败:', e)
-  responses = { relationship: { stranger: ["戳什么戳！"] }, mood: {}, achievements: {} }
+/** 获取戳一戳图片目录（支持配置覆盖） */
+function getImageDir() {
+  const cfg = xrkcfg?.poke?.paths?.image_dir
+  return cfg ? path.isAbsolute(cfg) ? cfg : path.join(ROOT_PATH, cfg) : DEFAULT_IMAGE_DIR
 }
+
+/** 获取戳一戳语音目录（支持配置覆盖） */
+function getVoiceDir() {
+  const cfg = xrkcfg?.poke?.paths?.voice_dir
+  return cfg ? path.isAbsolute(cfg) ? cfg : path.join(ROOT_PATH, cfg) : DEFAULT_VOICE_DIR
+}
+
+// 加载响应配置（data/xrkconfig/poke_responses.json）
+const responses = (() => {
+  const raw = readConfigSync('poke_responses', 'json')
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw
+  logger.warn('[戳一戳] 未找到 data/xrkconfig/poke_responses.json，使用默认响应')
+  return { relationship: { stranger: ["戳什么戳！"] }, mood: {}, achievements: {} }
+})()
 
 // 内存存储实现
 const memoryStorage = {
@@ -93,7 +99,6 @@ const REDIS_PREFIX = {
   COOLDOWN: 'xrk:poke:cd:'
 }
 
-// 默认用户状态
 const DEFAULT_USER_STATE = {
   intimacy: 0,
   lastInteraction: 0,
@@ -102,11 +107,14 @@ const DEFAULT_USER_STATE = {
   moodValue: 50,
   moodExpiry: null,
   lastSpecialEffect: {},
-  dailyRewards: [],
+  lastPokeDate: '',
+  consecutiveDays: 0,
   totalPokes: 0,
   achievements: [],
   relationship: 'stranger'
 }
+
+const MOOD_RANGES = { angry: 20, sad: 40, normal: 60, happy: 80, excited: 100 }
 
 export class UniversalPoke extends plugin {
   constructor() {
@@ -126,6 +134,14 @@ export class UniversalPoke extends plugin {
     const modules = config.modules || {}
     
     this.modules = {
+      daily_rewards: {
+        enabled: modules.daily_rewards ?? true,
+        execute: this.dailyRewardsSystem.bind(this)
+      },
+      festival: {
+        enabled: modules.festival ?? true,
+        execute: this.festivalEffects.bind(this)
+      },
       basic: {
         enabled: modules.basic ?? true,
         execute: this.basicResponse.bind(this)
@@ -288,8 +304,9 @@ export class UniversalPoke extends plugin {
       if (record.count > 3) punishLevel = 2
       if (record.count > 10) punishLevel = 3
       
-      // 尝试禁言
-      if (this.canMute(identities) && Math.random() < 0.5 * punishLevel) {
+      // 尝试禁言（概率从配置 master_chances.mute 读取）
+      const muteChance = (xrkcfg.poke?.master_chances?.mute ?? 0.5) * punishLevel
+      if (this.canMute(identities) && Math.random() < muteChance) {
         const muteTime = Math.min(300 * punishLevel * record.count, 86400) // 最多禁言24小时
         
         try {
@@ -304,8 +321,9 @@ export class UniversalPoke extends plugin {
         }
       }
       
-      // 反戳惩罚
-      if (xrkcfg.poke?.pokeback_enabled && Math.random() < 0.7) {
+      // 反戳惩罚（概率从配置 master_chances.pokeback 读取）
+      const pokebackChance = xrkcfg.poke?.master_chances?.pokeback ?? 0.7
+      if (xrkcfg.poke?.pokeback_enabled && Math.random() < pokebackChance) {
         const pokeReplies = responses.master_protection?.punishments?.poke || ["反击！"]
         const reply = pokeReplies[Math.floor(Math.random() * pokeReplies.length)]
         await e.reply(reply)
@@ -321,8 +339,6 @@ export class UniversalPoke extends plugin {
       logger.error('[戳主人] 惩罚执行失败:', err)
     }
   }
-
-  // ... [其他所有原有的函数保持不变] ...
 
   /** 检查冷却时间 */
   async checkCooldown(userId, type) {
@@ -363,23 +379,63 @@ export class UniversalPoke extends plugin {
   /** 更新基础信息 */
   async updateBasicInfo(e, userState) {
     const now = Date.now()
-    
-    if (now - userState.lastInteraction < 30000) {
-      userState.consecutivePokes++
-    } else {
-      userState.consecutivePokes = 1
-    }
+    const today = new Date().toISOString().slice(0, 10)
+    const yesterday = new Date(now - 86400000).toISOString().slice(0, 10)
+
+    userState.lastPokeInterval = now - userState.lastInteraction
+    if (now - userState.lastInteraction < 30000) userState.consecutivePokes++
+    else userState.consecutivePokes = 1
+
+    if (userState.lastPokeDate === yesterday) userState.consecutiveDays = (userState.consecutiveDays || 0) + 1
+    else if (userState.lastPokeDate !== today) userState.consecutiveDays = 1
+    userState.lastPokeDate = today
 
     userState.lastInteraction = now
     userState.totalPokes++
-    
     await this.incrementDailyCount(e.operator_id)
+  }
+
+  /** 从文案池随机发送（统一抽回复逻辑） */
+  async sendFromPool(e, pool, userState, prefix = '') {
+    if (!Array.isArray(pool) || pool.length === 0) return false
+    const reply = pool[Math.floor(Math.random() * pool.length)]
+    await e.reply([segment.at(e.operator_id), `\n${prefix}${this.formatReply(reply, e, userState)}`])
+    return true
+  }
+
+  /** 根据当前小时获取时段（支持配置覆盖，兼容数组 [5,9] 与字符串 "5,9"） */
+  getTimeEffect(hour) {
+    const slots = xrkcfg.poke?.time_slots || {}
+    const parseRange = (v) => {
+      if (Array.isArray(v) && v.length >= 2) return v.map(Number)
+      if (typeof v === 'string') {
+        const parts = v.split(',').map(s => parseInt(String(s).trim(), 10)).filter(n => !isNaN(n))
+        return parts.length >= 2 ? parts : null
+      }
+      return null
+    }
+    const check = (name, [start, end]) => {
+      if (end > start) return hour >= start && hour < end
+      return hour >= start || hour < end // 跨日如 night: [22, 3]
+    }
+    for (const [name, range] of Object.entries(slots)) {
+      const parsed = parseRange(range)
+      if (parsed && check(name, parsed)) return name
+    }
+    // 默认时段
+    if (hour >= 3 && hour < 5) return 'dawn'
+    if (hour >= 5 && hour < 9) return 'morning'
+    if (hour >= 11 && hour < 14) return 'noon'
+    if (hour >= 14 && hour < 17) return 'afternoon'
+    if (hour >= 17 && hour < 20) return 'evening'
+    if (hour >= 22 || hour < 3) return 'night'
+    return null
   }
 
   /** 执行模块 */
   async executeModules(e, userState, identities) {
     const results = {}
-    const moduleOrder = ['mood', 'intimacy', 'achievement', 'special', 'basic', 'punishment', 'image', 'voice', 'pokeback']
+    const moduleOrder = ['daily_rewards', 'festival', 'mood', 'intimacy', 'achievement', 'special', 'basic', 'punishment', 'image', 'voice', 'pokeback']
     
     for (const name of moduleOrder) {
       const module = this.modules[name]
@@ -387,8 +443,9 @@ export class UniversalPoke extends plugin {
         try {
           results[name] = await module.execute(e, userState, identities)
           
-          // 如果某个模块处理成功，有一定概率跳过后续模块
-          if (results[name] && Math.random() < 0.3) {
+          // 如果某个模块处理成功，有一定概率跳过后续模块（可配置）
+          const skipChance = xrkcfg.poke?.module_skip_chance ?? 0.3
+          if (results[name] && Math.random() < skipChance) {
             break
           }
         } catch (err) {
@@ -402,54 +459,72 @@ export class UniversalPoke extends plugin {
 
   /** 基础回复模块 */
   async basicResponse(e, userState, identities) {
-    const replyPool = this.getReplyPool(userState, identities)
-    const replyChance = this.calculateReplyChance(userState, identities)
-    
-    if (Math.random() < replyChance && replyPool.length > 0) {
-      const reply = replyPool[Math.floor(Math.random() * replyPool.length)]
-      await e.reply([
-        segment.at(e.operator_id),
-        `\n${this.formatReply(reply, e, userState)}`
-      ])
+    const pool = this.getReplyPool(userState, identities)
+    const chance = this.calculateReplyChance(userState, identities)
+    return pool.length && Math.random() < chance ? this.sendFromPool(e, pool, userState) : false
+  }
+
+  /** 每日奖励模块 */
+  async dailyRewardsSystem(e, userState) {
+    const dailyCount = await this.getDailyCount(e.operator_id)
+    const rewards = responses.daily_rewards || {}
+    const p = xrkcfg.poke?.chances || {}
+
+    if (dailyCount === 1 && rewards.first?.length && Math.random() < (p.daily_first ?? 0.6)) {
+      return this.sendFromPool(e, rewards.first, userState, '🎁 ')
+    }
+    if ((userState.consecutiveDays || 0) >= 2 && rewards.continuous?.length && Math.random() < (p.daily_continuous ?? 0.25)) {
+      const txt = String(rewards.continuous[Math.floor(Math.random() * rewards.continuous.length)]).replace(/{days}/g, userState.consecutiveDays)
+      await e.reply([segment.at(e.operator_id), `\n📅 ${this.formatReply(txt, e, userState)}`])
       return true
     }
-    
     return false
+  }
+
+  /** 节日效果模块 */
+  async festivalEffects(e, userState) {
+    const festival = this.getCurrentFestival()
+    if (!festival) return false
+    const replies = responses.festival_effects?.[festival]
+    const chance = xrkcfg.poke?.chances?.festival ?? 0.15
+    if (!replies?.length || Math.random() > chance) return false
+    return this.sendFromPool(e, replies, userState, '🎉 ')
+  }
+
+  getCurrentFestival() {
+    const d = new Date()
+    const m = d.getMonth() + 1
+    const day = d.getDate()
+    if (m === 1 && day === 1) return 'new_year'
+    if (m === 2 && day === 14) return 'valentine'
+    if (m === 5 && day === 1) return 'labor_day'
+    if (m === 6 && day === 1) return 'children_day'
+    if (m === 10 && day === 1) return 'national_day'
+    if (m === 10 && day === 31) return 'halloween'
+    if (m === 12 && day === 25) return 'christmas'
+    // 七夕（农历七月初七，约公历8月中旬）
+    if (m === 8 && day >= 14 && day <= 22) return 'qixi'
+    // 端午（农历五月初五，约公历6月上旬）
+    if (m === 6 && day >= 5 && day <= 15) return 'dragon_boat'
+    // 中秋（农历八月十五，约公历9月中旬）
+    if (m === 9 && day >= 13 && day <= 22) return 'midautumn'
+    // 春节（农历正月初一，约公历1月下旬-2月中旬）
+    if ((m === 1 && day >= 20) || (m === 2 && day <= 20)) return 'spring_festival'
+    return null
   }
 
   /** 心情系统模块 */
   async moodSystem(e, userState, identities) {
-    const moodChangeChance = xrkcfg.poke?.chances?.mood_change || 0.3
-    
-    if (Math.random() < moodChangeChance) {
-      const moodChange = this.calculateMoodChange(userState, identities)
-      userState.moodValue = Math.max(0, Math.min(100, userState.moodValue + moodChange))
-      
-      if (userState.moodValue < 20) {
-        userState.mood = 'angry'
-      } else if (userState.moodValue < 40) {
-        userState.mood = 'sad'
-      } else if (userState.moodValue < 60) {
-        userState.mood = 'normal'
-      } else if (userState.moodValue < 80) {
-        userState.mood = 'happy'
-      } else {
-        userState.mood = 'excited'
-      }
+    const p = xrkcfg.poke?.chances || {}
+    if (Math.random() >= (p.mood_change ?? 0.2)) return false
 
-      if (Math.abs(moodChange) > 10 && Math.random() < 0.5) {
-        const moodReplies = responses.mood[userState.mood]
-        if (moodReplies && moodReplies.length > 0) {
-          const reply = moodReplies[Math.floor(Math.random() * moodReplies.length)]
-          await e.reply([
-            segment.at(e.operator_id),
-            `\n${this.formatReply(reply, e, userState)}`
-          ])
-          return true
-        }
-      }
+    const moodChange = this.calculateMoodChange(userState, identities)
+    userState.moodValue = Math.max(0, Math.min(100, userState.moodValue + moodChange))
+    userState.mood = Object.entries(MOOD_RANGES).find(([, v]) => userState.moodValue < v)?.[0] || 'excited'
+
+    if (Math.abs(moodChange) > 10 && Math.random() < (p.mood_reply ?? 0.5)) {
+      return this.sendFromPool(e, responses.mood?.[userState.mood], userState)
     }
-
     return false
   }
 
@@ -483,10 +558,11 @@ export class UniversalPoke extends plugin {
   }
 
   /** 成就系统模块 */
-  async achievementSystem(e, userState, identities) {
-    const achievements = []
-    
-    const achievementChecks = [
+  async achievementSystem(e, userState) {
+    const hour = new Date().getHours()
+    const interval = userState.lastPokeInterval ?? 0
+
+    const checks = [
       { id: 'first_poke', condition: userState.totalPokes === 1, name: '初次见面' },
       { id: 'poke_10', condition: userState.totalPokes === 10, name: '戳戳新手' },
       { id: 'poke_100', condition: userState.totalPokes === 100, name: '戳戳达人' },
@@ -495,169 +571,87 @@ export class UniversalPoke extends plugin {
       { id: 'consecutive_10', condition: userState.consecutivePokes === 10, name: '连击达人' },
       { id: 'intimate_100', condition: userState.intimacy >= 100, name: '亲密好友' },
       { id: 'intimate_500', condition: userState.intimacy >= 500, name: '至交挚友' },
-      { id: 'mood_master', condition: userState.moodValue >= 90, name: '心情调节大师' }
+      { id: 'mood_master', condition: userState.moodValue >= 90, name: '心情调节大师' },
+      { id: 'night_owl', condition: hour >= 23 || hour < 5, name: '夜猫子' },
+      { id: 'early_bird', condition: hour >= 5 && hour < 8, name: '早起鸟' },
+      { id: 'speed_poke', condition: userState.totalPokes > 1 && interval > 0 && interval < 5000, name: '光速戳戳' },
+      { id: 'gentle_touch', condition: userState.totalPokes > 1 && interval >= 300000, name: '温柔触碰' }
     ]
-    
-    for (const check of achievementChecks) {
-      if (check.condition && !userState.achievements.includes(check.id)) {
-        userState.achievements.push(check.id)
-        achievements.push(check)
-        
-        const achievementReplies = responses.achievements?.[check.id] || responses.achievements?.default || ["成就达成！"]
-        const reply = achievementReplies[Math.floor(Math.random() * achievementReplies.length)]
-        
-        await e.reply([
-          segment.at(e.operator_id),
-          `\n🏆 获得成就【${check.name}】\n${this.formatReply(reply, e, userState)}`
-        ])
-        
+
+    for (const c of checks) {
+      if (c.condition && !userState.achievements.includes(c.id)) {
+        userState.achievements.push(c.id)
+        const pool = responses.achievements?.[c.id] || responses.achievements?.default || ['成就达成！']
+        await this.sendFromPool(e, pool, userState, `🏆 获得成就【${c.name}】\n`)
         return true
       }
     }
-    
     return false
   }
 
   /** 特殊效果模块 */
-  async specialEffects(e, userState, identities) {
-    const specialChance = xrkcfg.poke?.chances?.special_trigger || 0.15
-    
-    if (!await this.checkCooldown(e.operator_id, 'special_effect')) {
-      return false
-    }
-    
-    if (Math.random() < specialChance) {
-      const hour = new Date().getHours()
-      let timeEffect = null
-      
-      if (hour >= 5 && hour < 9) {
-        timeEffect = 'morning'
-      } else if (hour >= 11 && hour < 14) {
-        timeEffect = 'noon'
-      } else if (hour >= 17 && hour < 20) {
-        timeEffect = 'evening'
-      } else if (hour >= 22 || hour < 3) {
-        timeEffect = 'night'
-      }
-      
+  async specialEffects(e, userState) {
+    const p = xrkcfg.poke?.chances || {}
+    if (!(await this.checkCooldown(e.operator_id, 'special_effect'))) return false
+
+    if (Math.random() < (p.special_trigger ?? 0.15)) {
+      const timeEffect = this.getTimeEffect(new Date().getHours())
       if (timeEffect && responses.time_effects?.[timeEffect]) {
-        const replies = responses.time_effects[timeEffect]
-        if (replies && replies.length > 0) {
-          const reply = replies[Math.floor(Math.random() * replies.length)]
-          await e.reply([
-            segment.at(e.operator_id),
-            `\n${this.formatReply(reply, e, userState)}`
-          ])
-          return true
-        }
+        return this.sendFromPool(e, responses.time_effects[timeEffect], userState)
       }
     }
-    
-    if (Math.random() < 0.1 && userState.intimacy > 50) {
-      const specialEffects = Object.keys(responses.special_effects || {})
-      if (specialEffects.length > 0) {
-        const effect = specialEffects[Math.floor(Math.random() * specialEffects.length)]
-        const replies = responses.special_effects[effect]
-        if (replies && replies.length > 0) {
-          const reply = replies[Math.floor(Math.random() * replies.length)]
-          await e.reply([
-            segment.at(e.operator_id),
-            `\n✨ ${this.formatReply(reply, e, userState)}`
-          ])
-          return true
-        }
+    if (Math.random() < (p.special_effect_extra ?? 0.1) && userState.intimacy > 50) {
+      const effects = Object.keys(responses.special_effects || {})
+      if (effects.length) {
+        const effect = effects[Math.floor(Math.random() * effects.length)]
+        return this.sendFromPool(e, responses.special_effects[effect], userState, '✨ ')
       }
     }
-    
     return false
   }
 
   /** 惩罚系统模块 */
   async punishmentSystem(e, userState, identities) {
-    if (userState.consecutivePokes <= 5) return null
-    
-    const punishmentChance = xrkcfg.poke?.chances?.punishment || 0.3
-    
-    if (!await this.checkCooldown(e.operator_id, 'punishment')) {
+    if (userState.consecutivePokes <= 5) return false
+    const p = xrkcfg.poke?.chances || {}
+    if (!(await this.checkCooldown(e.operator_id, 'punishment'))) return false
+    if (Math.random() >= (p.punishment ?? 0.3)) {
+      userState.moodValue = Math.max(0, userState.moodValue - userState.consecutivePokes * 2)
       return false
     }
-    
-    if (Math.random() < punishmentChance) {
-      if (this.canMute(identities) && Math.random() < 0.5) {
-        const muteTime = Math.min(60 * userState.consecutivePokes, 1800)
-        
-        try {
-          await e.group.muteMember(e.operator_id, muteTime)
-          const muteReplies = responses.punishments?.mute?.success || ["禁言成功！"]
-          const reply = muteReplies[Math.floor(Math.random() * muteReplies.length)]
-          
-          await e.reply([
-            segment.at(e.operator_id),
-            `\n${this.formatReply(reply, e, userState)}`
-          ])
-          
-          return true
-        } catch (err) {
-          const failReplies = responses.punishments?.mute?.fail || ["禁言失败..."]
-          const reply = failReplies[Math.floor(Math.random() * failReplies.length)]
-          
-          await e.reply([
-            segment.at(e.operator_id),
-            `\n${this.formatReply(reply, e, userState)}`
-          ])
-        }
-      }
-      
-      if (Math.random() < 0.5) {
-        const reduction = Math.min(userState.consecutivePokes * 2, 20)
-        userState.intimacy = Math.max(0, userState.intimacy - reduction)
-        
-        const reductionReplies = responses.punishments?.intimacy_reduction || ["亲密度下降了..."]
-        const reply = reductionReplies[Math.floor(Math.random() * reductionReplies.length)]
-        
-        await e.reply([
-          segment.at(e.operator_id),
-          `\n${this.formatReply(reply.replace('{reduction}', reduction), e, userState)}`
-        ])
-        
-        return true
+
+    const muteChance = p.mute_chance ?? 0.5
+    if (this.canMute(identities) && Math.random() < muteChance) {
+      try {
+        await e.group.muteMember(e.operator_id, Math.min(60 * userState.consecutivePokes, 1800))
+        return this.sendFromPool(e, responses.punishments?.mute?.success || ['禁言成功！'], userState)
+      } catch {
+        return this.sendFromPool(e, responses.punishments?.mute?.fail || ['禁言失败...'], userState)
       }
     }
-    
-    userState.moodValue = Math.max(0, userState.moodValue - userState.consecutivePokes * 2)
-    
-    return false
+    const reduction = Math.min(userState.consecutivePokes * 2, 20)
+    userState.intimacy = Math.max(0, userState.intimacy - reduction)
+    const pool = (responses.punishments?.intimacy_reduction || ['亲密度下降了...']).map(r => r.replace(/{reduction}/g, reduction))
+    return this.sendFromPool(e, pool, userState)
   }
 
-  /** 反戳系统模块 */
+  /** 反戳系统模块（基准概率从配置 pokeback_base_chance 读取） */
   async pokebackSystem(e, userState, identities) {
     if (!xrkcfg.poke?.pokeback_enabled) return false
-    
-    let pokebackChance = 0.3
-    
-    if (userState.mood === 'angry') pokebackChance += 0.3
-    if (userState.consecutivePokes > 5) pokebackChance += 0.2
-    if (identities.operatorIsMaster) pokebackChance -= 0.2
-    
-    if (Math.random() < pokebackChance) {
-      const pokebackReplies = responses.pokeback?.[userState.mood] || responses.pokeback?.normal || ["戳回去！"]
-      const reply = pokebackReplies[Math.floor(Math.random() * pokebackReplies.length)]
-      
-      await e.reply([
-        segment.at(e.operator_id),
-        `\n${this.formatReply(reply, e, userState)}`
-      ])
-      
-      const pokeCount = Math.min(Math.floor(userState.consecutivePokes / 2), 5)
-      for (let i = 0; i < pokeCount; i++) {
-        await common.sleep(1000)
-        await this.pokeMember(e, e.operator_id)
-      }
-      
-      return true
+    let chance = xrkcfg.poke?.pokeback_base_chance ?? 0.3
+    if (userState.mood === 'angry') chance += 0.3
+    if (userState.consecutivePokes > 5) chance += 0.2
+    if (identities.operatorIsMaster) chance -= 0.2
+    if (Math.random() >= chance) return false
+
+    const pool = responses.pokeback?.[userState.mood] || responses.pokeback?.normal || ['戳回去！']
+    if (!(await this.sendFromPool(e, pool, userState))) return false
+    const pokeCount = Math.min(Math.floor(userState.consecutivePokes / 2), 5)
+    for (let i = 0; i < pokeCount; i++) {
+      await common.sleep(1000)
+      await this.pokeMember(e, e.operator_id)
     }
-    
-    return false
+    return true
   }
 
   /** 发送图片模块 */
@@ -669,14 +663,15 @@ export class UniversalPoke extends plugin {
     
     if (Math.random() < imageChance) {
       try {
-        if (fs.existsSync(IMAGE_DIR)) {
-          const files = fs.readdirSync(IMAGE_DIR).filter(file =>
+        const imgDir = getImageDir()
+        if (FileUtils.existsSync(imgDir)) {
+          const files = (FileUtils.readDirSync(imgDir) || []).filter(file =>
             /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
           )
           
           if (files.length > 0) {
             const randomFile = files[Math.floor(Math.random() * files.length)]
-            await e.reply(segment.image(`file://${path.join(IMAGE_DIR, randomFile)}`))
+            await e.reply(segment.image(`file://${path.join(imgDir, randomFile)}`))
             return true
           }
         }
@@ -697,14 +692,15 @@ export class UniversalPoke extends plugin {
     
     if (Math.random() < voiceChance) {
       try {
-        if (fs.existsSync(VOICE_DIR)) {
-          const files = fs.readdirSync(VOICE_DIR).filter(file =>
+        const voiceDir = getVoiceDir()
+        if (FileUtils.existsSync(voiceDir)) {
+          const files = (FileUtils.readDirSync(voiceDir) || []).filter(file =>
             /\.(mp3|wav|ogg|silk|amr)$/i.test(file)
           )
           
           if (files.length > 0) {
             const randomFile = files[Math.floor(Math.random() * files.length)]
-            await e.reply(segment.record(`file://${path.join(VOICE_DIR, randomFile)}`))
+            await e.reply(segment.record(`file://${path.join(voiceDir, randomFile)}`))
             return true
           }
         }
@@ -721,24 +717,27 @@ export class UniversalPoke extends plugin {
   /** 获取回复池 */
   getReplyPool(userState, identities) {
     let pool = []
-    
+
     const relationshipReplies = responses.relationship?.[userState.relationship] || responses.relationship?.stranger || []
     pool = [...relationshipReplies]
-    
+
     if (responses.mood?.[userState.mood]) {
       pool = [...pool, ...responses.mood[userState.mood]]
     }
-    
-    if (identities.operatorIsMaster && responses.special_identity?.master) {
-      pool = [...pool, ...responses.special_identity.master]
-    }
-    
+
+    const si = responses.special_identity || {}
+    if (identities.operatorIsMaster && si.master?.length) pool = [...pool, ...si.master]
+    else if (identities.operatorIsOwner && si.owner?.length) pool = [...pool, ...si.owner]
+    else if (identities.operatorIsAdmin && si.admin?.length) pool = [...pool, ...si.admin]
+    if (userState.totalPokes <= 10 && si.newbie?.length) pool = [...pool, ...si.newbie]
+    if (identities.operatorRole === 'vip' && si.vip?.length) pool = [...pool, ...si.vip]
+
     return pool
   }
 
-  /** 计算回复概率 */
+  /** 计算回复概率（基准从配置 basic_reply_chance 读取） */
   calculateReplyChance(userState, identities) {
-    let chance = 0.6
+    let chance = xrkcfg.poke?.basic_reply_chance ?? 0.6
     
     chance += Math.min(0.2, userState.intimacy / 1000)
     
@@ -786,14 +785,14 @@ export class UniversalPoke extends plugin {
   /** 格式化回复 */
   formatReply(reply, e, userState) {
     const nickname = e.sender?.card || e.sender?.nickname || '你'
-    
-    return reply
+    return String(reply)
       .replace(/{name}/g, nickname)
       .replace(/{intimacy}/g, userState.intimacy)
       .replace(/{mood}/g, this.getMoodName(userState.mood))
       .replace(/{consecutive}/g, userState.consecutivePokes)
       .replace(/{total}/g, userState.totalPokes)
       .replace(/{count}/g, userState.consecutivePokes)
+      .replace(/{days}/g, userState.consecutiveDays || 1)
   }
 
   /** 获取心情名称 */

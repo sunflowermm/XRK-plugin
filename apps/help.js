@@ -1,8 +1,8 @@
 import { takeScreenshot } from '../components/util/takeScreenshot.js';
 import path from 'path';
 import fs from 'fs';
-import { helpCfg, helpList } from '../config/system/help_system.js';
-import xrkconfig from '../components/xrkconfig.js';
+import { helpCfg, helpList } from '../lib/help_system.js';
+import xrkconfig from '../lib/xrkconfig.js';
 
 const cwd = process.cwd();
 const root = path.join(cwd, 'plugins/XRK-plugin');

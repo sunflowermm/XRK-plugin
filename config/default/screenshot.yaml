@@ -1,0 +1,134 @@
+# 网页截图配置（标准模板，首次运行复制到 data/xrkconfig/screenshot.yaml）
+# 说明：本配置用于 apps/web_screenshot.js 的 URL 过滤与截图参数
+
+enabled: false
+
+# 渲染精度（将映射为 deviceScaleFactor）
+quality: 2
+
+# 默认视口（会映射到 screenshotConfig 的 width/height）
+viewport:
+  width: 1536
+  height: 2138
+
+# 页面等待策略（传给渲染器）
+waitUntil: networkidle2
+
+# URL 处理策略
+urlProcessing:
+  maxUrlsPerMessage: 5
+  minUrlLength: 4
+  maxUrlLength: 2083
+
+# 域名白/黑名单（先白名单放行，再黑名单拦截）
+whitelistDomains:
+  - github.com
+  - gitee.com
+  - gitlab.com
+  - stackoverflow.com
+  - microsoft.com
+  - google.com
+  - npmjs.com
+  - nodejs.org
+
+blacklistDomains:
+  - bilibili.com
+  - douyin.com
+  - tiktok.com
+  - twitter.com
+  - facebook.com
+  - instagram.com
+  - weibo.com
+  - xiaohongshu.com
+  - porn
+  - adult
+  - xxx
+  - sex
+  - hentai
+  - nsfw
+  - dating
+  - gambling
+  - bet
+  - casino
+  - lottery
+  - gamble
+  - ad.
+  - ads.
+  - track.
+  - analytics.
+  - click.
+  - pixel.
+  - stat.
+  - counter.
+  - warez
+  - crack
+  - hack
+  - cheat
+  - phish
+  - malware
+  - spam
+  - vtr7yn.zprosq.com
+
+# IP 黑名单（CIDR）
+blacklistIPs:
+  - 0.0.0.0/8
+  - 10.0.0.0/8
+  - 100.64.0.0/10
+  - 127.0.0.0/8
+  - 169.254.0.0/16
+  - 172.16.0.0/12
+  - 192.0.0.0/24
+  - 192.0.2.0/24
+  - 192.88.99.0/24
+  - 192.168.0.0/16
+  - 198.18.0.0/15
+  - 198.51.100.0/24
+  - 203.0.113.0/24
+  - 224.0.0.0/4
+  - 240.0.0.0/4
+  - fc00::/7
+  - fe80::/10
+  - ff00::/8
+
+allowedLocalAddresses:
+  - localhost
+  - 127.0.0.1
+
+# 需要过滤的 URL 参数（跟踪参数等）
+filteredParams:
+  - utm_source
+  - utm_medium
+  - utm_campaign
+  - utm_term
+  - utm_content
+  - fbclid
+  - gclid
+  - dclid
+  - zanpid
+  - mk_token
+  - session_id
+  - sessionid
+  - sid
+  - token
+  - ref
+  - source
+  - from
+  - platform
+
+blockedExtensions:
+  images: [jpg, jpeg, png, gif, bmp, webp, svg, ico]
+  media: [mp4, webm, ogg, mp3, wav, flv, avi, mov]
+  documents: [pdf, doc, docx, xls, xlsx, ppt, pptx, odt, ods]
+  archives: [zip, rar, 7z, tar, gz, bz2, xz]
+  executables: [exe, msi, apk, ipa, dmg, pkg, deb, rpm]
+  code: [js, css, py, php, bat, cmd, vbs]
+  fonts: [ttf, otf, woff, woff2, eot]
+
+# 截图参数（透传给 takeScreenshot -> RendererLoader.getRenderer().screenshot）
+screenshotConfig:
+  width: 1536
+  height: 2138
+  waitUntil: networkidle2
+  fullPage: true
+  imgType: jpeg
+  quality: 100

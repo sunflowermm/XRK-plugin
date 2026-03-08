@@ -4,6 +4,7 @@ import path from 'path';
 import { exec } from 'child_process';
 import fetch from 'node-fetch';
 import { takeScreenshot } from '../components/util/takeScreenshot.js';
+import { readPluginListSync, getResourcesPluginsDir } from '../lib/plugin-lists.js';
 
 export let pluginData = {};
 
@@ -84,8 +85,7 @@ export const proxyList = [
     "https://www.ghproxy.cn"
 ];
 
-// 截图统一落盘：plugins/XRK-plugin/resources/plugins/*.png；分类列表缓存索引同目录 plugin_screenshots_index.json
-const PLUGINS_DIR = path.join(process.cwd(), 'plugins/XRK-plugin/resources/plugins');
+const PLUGINS_DIR = getResourcesPluginsDir();
 const PLUGIN_HTML_TEMPLATE = path.join(PLUGINS_DIR, 'template.html');
 const PLUGIN_SCREENSHOT_INDEX = path.join(PLUGINS_DIR, 'plugin_screenshots_index.json');
 const HTML_TEMP_DIR = path.join(process.cwd(), 'plugins/XRK-plugin/resources/help_other');
@@ -262,27 +262,27 @@ export function formatPluginItemHtml(pluginInfo) {
   `;
 }
 
+/** 分类名 → data/xrkconfig 配置名（与 commonconfig 子配置一致） */
 export const PLUGIN_CATEGORIES = [
-  { name: '推荐插件', file: 'recommended_plugins.json' },
-  { name: '文娱插件', file: 'entertainment_plugins.json' },
-  { name: 'IP类插件', file: 'ip_plugins.json' },
-  { name: '游戏插件', file: 'game_plugins.json' },
-  { name: 'JS插件', file: 'js.json' }
+  { name: '推荐插件', key: 'recommended_plugins' },
+  { name: '文娱插件', key: 'entertainment_plugins' },
+  { name: 'IP类插件', key: 'ip_plugins' },
+  { name: '游戏插件', key: 'game_plugins' },
+  { name: 'JS插件', key: 'js_plugins' }
 ];
 
-/** 按用户输入解析分类：先匹配 name，再匹配 file 去掉 .json 的部分 */
+/** 按用户输入解析分类：先匹配 name，再匹配 key */
 export function getCategoryByInput(input) {
   const trimmed = typeof input === 'string' ? input.trim() : '';
   if (!trimmed) return undefined;
   return (
     PLUGIN_CATEGORIES.find(c => c.name === trimmed) ||
-    PLUGIN_CATEGORIES.find(c => (c.file || '').replace(/\.json$/i, '') === trimmed)
+    PLUGIN_CATEGORIES.find(c => c.key === trimmed)
   );
 }
 
 function loadPluginsForCategory(category) {
-  const filePath = path.join(PLUGINS_DIR, category.file);
-  const plugins = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  const plugins = readPluginListSync(category.key);
   updatePluginData(plugins);
   return plugins;
 }
