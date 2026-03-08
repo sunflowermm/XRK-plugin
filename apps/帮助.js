@@ -9,10 +9,19 @@ const root = path.join(cwd, 'plugins/XRK-plugin');
 const helpDir = path.join(root, 'resources/help');
 
 function getRandomBackgroundImage() {
-  const bgFolderPath = path.join(helpDir, 'bg');
-  const files = fs.readdirSync(bgFolderPath).filter(f => /\.(jpg|jpeg|png|gif)$/i.test(f));
-  if (files.length === 0) logger.error('没有找到背景图片');
-  return `./bg/${files[Math.floor(Math.random() * files.length)]}`;
+  const imageExt = /\.(jpg|jpeg|png|gif)$/i;
+  const collect = (dir, prefix) => {
+    try {
+      return fs.readdirSync(dir).filter(f => imageExt.test(f)).map(f => `${prefix}${f}`);
+    } catch {
+      return [];
+    }
+  };
+  const bgFiles = collect(path.join(helpDir, 'bg'), './bg/');
+  const bgbgFiles = collect(path.join(helpDir, 'bgbg'), './bgbg/');
+  const all = [...bgFiles, ...bgbgFiles];
+  if (all.length === 0) logger.error('没有找到背景图片');
+  return all.length ? all[Math.floor(Math.random() * all.length)] : './bg/';
 }
 
 function filterHelpList() {
