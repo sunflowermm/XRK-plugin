@@ -458,7 +458,7 @@ async function generatePluginImages(category, plugins) {
   const files = [];
   for (let [index, group] of groups.entries()) {
     const content = group.map(p => formatPluginItemHtml(p)).join('');
-    const baseName = `${category.file.replace(/\.json$/i, '')}_group_${index + 1}`;
+    const baseName = `${(category.key || 'unknown').replace(/\.json$/i, '')}_group_${index + 1}`;
     const htmlContent = createHtmlTemplate(`${category.name} - 第 ${index + 1} 组`, content);
     const outPath = await saveAndScreenshot(htmlContent, baseName, { waitForTimeout: 600 });
     if (outPath) files.push(path.basename(outPath));
