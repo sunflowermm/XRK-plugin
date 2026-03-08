@@ -21,6 +21,10 @@ body, html {
     overflow-x: hidden;
 }
 
+body {
+    position: relative;
+}
+
 .container {
     position: relative;
     width: 1000px;
@@ -29,7 +33,7 @@ body, html {
 }
 
 .background {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
