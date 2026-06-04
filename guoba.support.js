@@ -1,13 +1,183 @@
 /**
- * 锅巴面板支持（与 guoba-plugin 约定一致）
- * 主配置读写 data/xrkconfig/config.yaml，经 lib/xrkconfig.js 单例
- * 帮助/词库/戳文案/截图/插件列表等见 commonconfig/xrk.js 与 Web 控制台「向日葵配置」
+ * 锅巴面板：读写 data/xrkconfig/*，表单见 guoba.schemas.js
  */
 import lodash from 'lodash'
 import yaml from 'yaml'
 import xrkconfig from './lib/xrkconfig.js'
 import { readConfigSync, getConfigPath } from './lib/config-paths.js'
 import { FileUtils } from '../../lib/utils/file-utils.js'
+import { allGuobaSchemas } from './guoba.schemas.js'
+
+const PLUGIN_CFG_KEYS = [
+  'recommended_plugins_cfg',
+  'entertainment_plugins_cfg',
+  'game_plugins_cfg',
+  'ip_plugins_cfg',
+  'js_plugins_cfg',
+]
+
+const EXTRA_CFG_KEYS = [
+  'weather_cfg',
+  'screenshot_cfg',
+  'help_system_cfg',
+  'ai_cfg',
+  'time_cfg',
+  'poke_responses_cfg',
+  ...PLUGIN_CFG_KEYS,
+]
+
+const EXTRA_FILE_MAP = {
+  weather_cfg: { file: 'weather', ext: 'yaml' },
+  screenshot_cfg: { file: 'screenshot', ext: 'yaml' },
+  help_system_cfg: { file: 'help_system', ext: 'yaml' },
+  ai_cfg: { file: 'ai', ext: 'json' },
+  time_cfg: { file: 'time_config', ext: 'json' },
+  poke_responses_cfg: { file: 'poke_responses', ext: 'json' },
+  recommended_plugins_cfg: { file: 'recommended_plugins', ext: 'json' },
+  entertainment_plugins_cfg: { file: 'entertainment_plugins', ext: 'json' },
+  game_plugins_cfg: { file: 'game_plugins', ext: 'json' },
+  ip_plugins_cfg: { file: 'ip_plugins', ext: 'json' },
+  js_plugins_cfg: { file: 'js_plugins', ext: 'json' },
+}
+
+function formatTimeSlotsForGuoba(config) {
+  const out = lodash.cloneDeep(config)
+  const slots = out?.poke?.time_slots
+  if (!slots || typeof slots !== 'object') return out
+  for (const [k, v] of Object.entries(slots)) {
+    if (Array.isArray(v)) slots[k] = v.join(',')
+  }
+  return out
+}
+
+function parseTimeSlotsFromGuoba(patch) {
+  const slots = patch?.poke?.time_slots
+  if (!slots || typeof slots !== 'object') return
+  for (const [k, v] of Object.entries(slots)) {
+    if (typeof v === 'string' && v.includes(',')) {
+      const parts = v.split(',').map(s => parseInt(String(s).trim(), 10)).filter(n => !Number.isNaN(n))
+      if (parts.length >= 2) slots[k] = parts
+    }
+  }
+}
+
+function normalizeCoremaster(value) {
+  if (value == null || value === '') return 0
+  if (Array.isArray(value)) {
+    const first = value[0]
+    const n = parseInt(String(first), 10)
+    return Number.isNaN(n) ? 0 : n
+  }
+  const n = parseInt(String(value), 10)
+  return Number.isNaN(n) ? 0 : n
+}
+
+function normalizeGroupList(value) {
+  if (!value) return []
+  const arr = Array.isArray(value) ? value : [value]
+  return arr.map(v => String(v).trim()).filter(Boolean)
+}
+
+function aiToGuoba(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { entries: [] }
+  return {
+    entries: Object.entries(raw).map(([keyword, replies]) => ({
+      keyword,
+      replies: Array.isArray(replies) ? replies : [],
+    })),
+  }
+}
+
+function aiFromGuoba(cfg) {
+  const obj = {}
+  for (const row of cfg?.entries || []) {
+    const keyword = row?.keyword
+    if (keyword == null || String(keyword).trim() === '') continue
+    obj[String(keyword).trim()] = Array.isArray(row.replies) ? row.replies : []
+  }
+  return obj
+}
+
+function timeToGuoba(raw) {
+  if (!raw || typeof raw !== 'object') return { emojis: [], timeMessages: [] }
+  const msgs = Array.isArray(raw.timeMessages) ? raw.timeMessages : []
+  return {
+    emojis: Array.isArray(raw.emojis) ? raw.emojis : [],
+    timeMessages: msgs.map(m => (typeof m === 'string' ? { value: m } : m)),
+  }
+}
+
+function timeFromGuoba(cfg) {
+  return {
+    emojis: Array.isArray(cfg?.emojis) ? cfg.emojis : [],
+    timeMessages: (cfg?.timeMessages || [])
+      .map(item => (typeof item === 'string' ? item : item?.value))
+      .filter(v => v != null && String(v).trim() !== ''),
+  }
+}
+
+function pluginListToGuoba(raw) {
+  return Array.isArray(raw) ? raw : []
+}
+
+function pluginListFromGuoba(list) {
+  return (Array.isArray(list) ? list : [])
+    .filter(item => item && item.name != null && String(item.name).trim() !== '')
+    .map(item => ({
+      name: String(item.name).trim(),
+      cn_name: item.cn_name ?? '',
+      anothername: item.anothername ?? '',
+      description: item.description ?? '',
+      git: item.git ?? '',
+    }))
+}
+
+function stripExtraFromPatch(patch) {
+  const extra = {}
+  for (const key of EXTRA_CFG_KEYS) {
+    if (patch[key] !== undefined) {
+      extra[key] = patch[key]
+      delete patch[key]
+    }
+  }
+  delete patch._guoba_hint
+  delete patch._xrk_console_hint
+  return extra
+}
+
+function writeConfigFile(file, ext, data) {
+  if (data == null) return
+  const filePath = getConfigPath(file, ext)
+  const content = ext === 'json' ? JSON.stringify(data, null, 2) : yaml.stringify(data)
+  FileUtils.writeFileSync(filePath, content, 'utf8')
+}
+
+function serializeExtra(key, data) {
+  if (key === 'ai_cfg') return aiFromGuoba(data)
+  if (key === 'time_cfg') return timeFromGuoba(data)
+  if (PLUGIN_CFG_KEYS.includes(key)) return pluginListFromGuoba(data)
+  return data
+}
+
+/** 锅巴只提交部分字段时，与磁盘已有配置合并后再写入 */
+function mergeWithExisting(cfgKey, payload) {
+  const meta = EXTRA_FILE_MAP[cfgKey]
+  if (!meta) return payload
+  if (cfgKey === 'ai_cfg' || PLUGIN_CFG_KEYS.includes(cfgKey)) return payload
+  const existing = readConfigSync(meta.file, meta.ext)
+  if (existing == null) return payload
+  return lodash.merge({}, existing, payload)
+}
+
+function loadExtraForGuoba(key) {
+  const meta = EXTRA_FILE_MAP[key]
+  if (!meta) return null
+  const raw = readConfigSync(meta.file, meta.ext)
+  if (key === 'ai_cfg') return aiToGuoba(raw)
+  if (key === 'time_cfg') return timeToGuoba(raw)
+  if (PLUGIN_CFG_KEYS.includes(key)) return pluginListToGuoba(raw)
+  return raw || (meta.ext === 'json' ? (PLUGIN_CFG_KEYS.includes(key) ? [] : {}) : {})
+}
 
 export function supportGuoba() {
   return {
@@ -19,264 +189,43 @@ export function supportGuoba() {
       link: 'https://github.com/sunflowermm/XRK-plugin',
       isV3: true,
       isV2: false,
-      description: '向日葵帮助、戳一戳、早报报时、词库 AI、网页截图等；完整多文件配置请用 XRK 控制台',
+      description:
+        '锅巴可编辑主配置、词库、报时、戳文案常用池、帮助分组、插件列表、查天气与网页截图；深层 JSON 仍可用 XRK 控制台。',
       icon: 'mdi:flower',
       iconColor: '#e8a317',
     },
     configInfo: {
-      schemas: [
-        { component: 'Divider', label: '基础' },
-        {
-          field: 'help_priority',
-          label: '帮助优先级',
-          bottomHelpMessage: '数值越大优先级越高，与 #向日葵修改帮助优先级 一致',
-          component: 'InputNumber',
-        },
-        {
-          field: 'sharing',
-          label: '资源分享',
-          component: 'Switch',
-        },
-        {
-          field: 'peopleai',
-          label: '词库 AI',
-          bottomHelpMessage: '人工 AI 词库回复（data/xrkconfig/ai.json）',
-          component: 'Switch',
-        },
-        {
-          field: 'screen_shot_http',
-          label: '网页截图',
-          component: 'Switch',
-        },
-        {
-          field: 'screen_shot_quality',
-          label: '截图渲染精度',
-          component: 'InputNumber',
-          componentProps: { min: 1, max: 3, step: 0.1 },
-        },
-        {
-          field: 'emoji_filename',
-          label: '全局表情目录名',
-          component: 'Input',
-        },
-        {
-          field: 'coremaster',
-          label: '核心主人 QQ',
-          component: 'InputNumber',
-          componentProps: { min: 0 },
-        },
-        { component: 'Divider', label: '推送' },
-        {
-          field: 'news_pushtime',
-          label: '早报推送时间(点)',
-          component: 'InputNumber',
-          componentProps: { min: 0, max: 23 },
-        },
-        {
-          field: 'news.delay',
-          label: '早报群间间隔(ms)',
-          component: 'InputNumber',
-          componentProps: { min: 0 },
-        },
-        {
-          field: 'time_groupss',
-          label: '整点报时群',
-          component: 'GTags',
-          componentProps: { allowAdd: true, allowDel: true },
-        },
-        {
-          field: 'news_groupss',
-          label: '早报推送群',
-          component: 'GTags',
-          componentProps: { allowAdd: true, allowDel: true },
-        },
-        {
-          field: 'thumwhiteList',
-          label: '骗赞白名单群',
-          component: 'GTags',
-          componentProps: { allowAdd: true, allowDel: true },
-        },
-        { component: 'Divider', label: '查天气' },
-        {
-          field: 'weather_cfg.enabled',
-          label: '启用查天气',
-          bottomHelpMessage: '关闭后 #查天气 不可用；写入 data/xrkconfig/weather.yaml',
-          component: 'Switch',
-        },
-        {
-          field: 'weather_cfg.max_cities',
-          label: '单次最多城市数',
-          component: 'InputNumber',
-          componentProps: { min: 1, max: 10 },
-        },
-        {
-          field: 'weather_cfg.forecast_days',
-          label: '预报天数',
-          bottomHelpMessage: '截图/文本均只展示前 N 天（爬虫截取 day7 区后裁剪）',
-          component: 'InputNumber',
-          componentProps: { min: 1, max: 7 },
-        },
-        {
-          field: 'weather_cfg.reply_mode',
-          label: '回复模式',
-          bottomHelpMessage: 'image：打开 nmc.cn 原页截取预报区；text：纯文本',
-          component: 'Select',
-          componentProps: {
-            options: [
-              { label: '图片（官网 DOM 截图）', value: 'image' },
-              { label: '文本', value: 'text' },
-            ],
-          },
-        },
-        {
-          field: 'weather_cfg.include_charts',
-          label: '含预报/气候曲线',
-          bottomHelpMessage: '截图包含预报曲线与气候背景（需等待 Highcharts 渲染）',
-          component: 'Switch',
-        },
-        {
-          field: 'weather_cfg.screenshot.mode',
-          label: '截图模式',
-          bottomHelpMessage: 'live：官网原页；html：爬虫 HTML 离线回退',
-          component: 'Select',
-          componentProps: {
-            options: [
-              { label: '官网 live', value: 'live' },
-              { label: '离线 HTML', value: 'html' },
-            ],
-          },
-        },
-        {
-          field: 'weather_cfg.include_climate',
-          label: '含气候背景图',
-          component: 'Switch',
-        },
-        {
-          field: 'weather_cfg.screenshot.delayBeforeScreenshot',
-          label: '截图前等待(ms)',
-          bottomHelpMessage: '等待 Highcharts/雷达图渲染，网络慢时可加大',
-          component: 'InputNumber',
-          componentProps: { min: 1000, max: 15000 },
-        },
-        {
-          field: 'weather_cfg.screenshot.width',
-          label: '截图视口宽',
-          component: 'InputNumber',
-          componentProps: { min: 640, max: 1920 },
-        },
-        {
-          field: 'weather_cfg.screenshot.deviceScaleFactor',
-          label: '截图清晰度',
-          component: 'InputNumber',
-          componentProps: { min: 1, max: 3, step: 0.5 },
-        },
-        {
-          field: 'weather_cfg.request_timeout_ms',
-          label: '请求超时(ms)',
-          component: 'InputNumber',
-          componentProps: { min: 3000 },
-        },
-        {
-          field: 'weather_cfg.user_agent',
-          label: 'User-Agent',
-          component: 'Input',
-        },
-        { component: 'Divider', label: '戳一戳' },
-        {
-          field: 'chuomaster',
-          label: '戳一戳主人',
-          component: 'Switch',
-        },
-        {
-          field: 'poke_priority',
-          label: '戳一戳优先级',
-          component: 'InputNumber',
-        },
-        {
-          field: 'corepoke_priority',
-          label: '戳一戳主人优先级',
-          component: 'InputNumber',
-        },
-        {
-          field: 'poke.enabled',
-          label: '启用戳一戳',
-          component: 'Switch',
-        },
-        {
-          field: 'poke.pokeback_enabled',
-          label: '允许戳回去',
-          component: 'Switch',
-        },
-        {
-          field: 'poke.basic_reply_chance',
-          label: '基础回复概率',
-          component: 'InputNumber',
-          componentProps: { min: 0, max: 1, step: 0.05 },
-        },
-        {
-          field: 'poke.image_chance',
-          label: '图片回复概率',
-          component: 'InputNumber',
-          componentProps: { min: 0, max: 1, step: 0.05 },
-        },
-        {
-          field: 'poke.voice_chance',
-          label: '语音回复概率',
-          component: 'InputNumber',
-          componentProps: { min: 0, max: 1, step: 0.05 },
-        },
-        {
-          field: 'poke.modules.basic',
-          label: '模块：基础回复',
-          component: 'Switch',
-        },
-        {
-          field: 'poke.modules.pokeback',
-          label: '模块：戳回去',
-          component: 'Switch',
-        },
-        {
-          field: 'poke.modules.image',
-          label: '模块：图片',
-          component: 'Switch',
-        },
-        {
-          field: 'poke.modules.voice',
-          label: '模块：语音',
-          component: 'Switch',
-        },
-        {
-          component: 'Divider',
-          label: '更多配置',
-        },
-        {
-          field: '_guoba_hint',
-          label: '说明',
-          bottomHelpMessage:
-            '帮助菜单、词库 AI、戳文案、网页截图、天气 User-Agent、安装插件列表等请在 XRK 控制台「向日葵配置」子项中编辑。',
-          component: 'Input',
-          componentProps: { disabled: true, placeholder: '仅提示，无需填写' },
-        },
-      ],
+      schemas: allGuobaSchemas,
       getConfigData() {
-        return {
-          ...lodash.cloneDeep(xrkconfig.config),
-          weather_cfg: readConfigSync('weather') || {},
+        const base = formatTimeSlotsForGuoba(lodash.cloneDeep(xrkconfig.config))
+        const extra = {}
+        for (const key of EXTRA_CFG_KEYS) {
+          extra[key] = loadExtraForGuoba(key)
         }
+        return { ...base, ...extra }
       },
       setConfigData(data, { Result }) {
-        const patch = { ...data }
-        const weatherCfg = patch.weather_cfg
-        delete patch._guoba_hint
-        delete patch.weather_cfg
+        const patch = lodash.cloneDeep(data)
+        const extra = stripExtraFromPatch(patch)
+
+        if (patch.coremaster !== undefined) patch.coremaster = normalizeCoremaster(patch.coremaster)
+        for (const f of ['time_groupss', 'news_groupss', 'thumwhiteList']) {
+          if (patch[f] !== undefined) patch[f] = normalizeGroupList(patch[f])
+        }
+
+        parseTimeSlotsFromGuoba(patch)
+
         const merged = lodash.merge({}, xrkconfig.getDefaultConfig(), xrkconfig.config, patch)
         xrkconfig.config = merged
         xrkconfig.save()
         xrkconfig.emit('change')
-        if (weatherCfg && typeof weatherCfg === 'object') {
-          const path = getConfigPath('weather')
-          FileUtils.writeFileSync(path, yaml.stringify(weatherCfg), 'utf8')
+
+        for (const [cfgKey, meta] of Object.entries(EXTRA_FILE_MAP)) {
+          if (extra[cfgKey] == null) continue
+          const payload = mergeWithExisting(cfgKey, serializeExtra(cfgKey, extra[cfgKey]))
+          writeConfigFile(meta.file, meta.ext, payload)
         }
+
         return Result.ok({}, '向日葵配置已保存~')
       },
     },
