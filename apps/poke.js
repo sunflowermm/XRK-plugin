@@ -3,7 +3,6 @@ import common from '../../../lib/common/common.js'
 import hub from '../lib/xrk-hub.js'
 import fs from 'fs'
 import path from 'path'
-import fetch from 'node-fetch'
 import { FileUtils } from '../../../lib/utils/file-utils.js'
 
 const xrkcfg = hub
@@ -21,6 +20,17 @@ function getImageDir() {
 function getVoiceDir() {
   const cfg = xrkcfg?.poke?.paths?.voice_dir
   return cfg ? path.isAbsolute(cfg) ? cfg : path.join(ROOT_PATH, cfg) : DEFAULT_VOICE_DIR
+}
+
+/** 从戳一戳图片目录随机选一张，无可用文件时返回 null */
+function pickRandomPokeImagePath() {
+  const imgDir = getImageDir()
+  if (!FileUtils.existsSync(imgDir)) return null
+  const files = (FileUtils.readDirSync(imgDir) || []).filter(file =>
+    /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
+  )
+  if (!files.length) return null
+  return path.join(imgDir, files[Math.floor(Math.random() * files.length)])
 }
 
 // 戳一戳文案由 xrk-hub 统一加载
@@ -281,16 +291,17 @@ export class UniversalPoke extends plugin {
         `\n${formattedReply}`
       ])
       
-      // 如果启用了主人保护图片
+      // 如果启用了主人保护图片（使用本地戳一戳图库，不依赖外部 API）
       if (xrkcfg.poke?.master_image) {
         try {
-          const response = await fetch("https://api.xingdream.top/API/poke.php")
-          const data = await response.json()
-          if (data?.status == 200 && data?.link) {
-            await e.reply(segment.image(data.link))
+          const imagePath = pickRandomPokeImagePath()
+          if (imagePath) {
+            await e.reply(segment.image(`file://${imagePath}`))
+          } else {
+            logger.debug(`[戳主人] 本地图片目录无可用文件: ${getImageDir()}`)
           }
         } catch (err) {
-          logger.error('[戳主人] 图片获取失败:', err)
+          logger.error('[戳主人] 图片发送失败:', err)
         }
       }
       
@@ -673,17 +684,10 @@ export class UniversalPoke extends plugin {
     
     if (Math.random() < imageChance) {
       try {
-        const imgDir = getImageDir()
-        if (FileUtils.existsSync(imgDir)) {
-          const files = (FileUtils.readDirSync(imgDir) || []).filter(file =>
-            /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
-          )
-          
-          if (files.length > 0) {
-            const randomFile = files[Math.floor(Math.random() * files.length)]
-            await e.reply(segment.image(`file://${path.join(imgDir, randomFile)}`))
-            return true
-          }
+        const imagePath = pickRandomPokeImagePath()
+        if (imagePath) {
+          await e.reply(segment.image(`file://${imagePath}`))
+          return true
         }
       } catch (err) {
         logger.error('[戳一戳] 发送图片失败:', err)
