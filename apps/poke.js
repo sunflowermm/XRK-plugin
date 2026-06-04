@@ -1,4 +1,3 @@
-import cfg from '../../../lib/config/config.js'
 import common from '../../../lib/common/common.js'
 import xrkcfg from '../lib/xrkconfig.js';
 import fs from 'fs'
@@ -6,6 +5,7 @@ import path from 'path'
 import fetch from 'node-fetch'
 import { FileUtils } from '../../../lib/utils/file-utils.js'
 import { getConfigPath, readConfigSync } from '../lib/config-paths.js'
+import { getMasterQQs } from '../lib/master-qq.js'
 const ROOT_PATH = process.cwd()
 const DEFAULT_IMAGE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/emoji/戳一戳表情')
 const DEFAULT_VOICE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/voice')
@@ -122,7 +122,7 @@ export class UniversalPoke extends plugin {
       name: '向日葵超级戳一戳',
       dsc: '模块化的戳一戳系统',
       event: 'notice.group.poke',
-      priority: xrkcfg.poke?.priority || -5000,
+      priority: xrkcfg.poke?.priority ?? xrkcfg.poke_priority ?? -5000,
       rule: [{ fnc: 'handlePoke', log: false }]
     })
     this.init()
@@ -200,12 +200,17 @@ export class UniversalPoke extends plugin {
       const identities = await this.getIdentities(e)
       
       // 检查是否戳主人
-      const masterQQs = cfg.masterQQ || []
+      const masterQQs = getMasterQQs()
       const targetIsMaster = masterQQs.includes(String(e.target_id))
-      const operatorIsMaster = masterQQs.includes(String(e.operator_id))
-      
-      // 处理戳主人的情况（非主人戳主人时触发保护）
-      if (targetIsMaster && !operatorIsMaster && this.modules.master.enabled) {
+      const operatorIsMaster = identities.operatorIsMaster
+
+      // 戳一戳主人：须开启 chuomaster，非主人戳主人时触发保护
+      if (
+        xrkcfg.chuomaster &&
+        targetIsMaster &&
+        !operatorIsMaster &&
+        this.modules.master.enabled
+      ) {
         return await this.handleMasterPoke(e, identities)
       }
 
@@ -358,7 +363,7 @@ export class UniversalPoke extends plugin {
 
   /** 获取身份信息 */
   async getIdentities(e) {
-    const masterQQs = cfg.masterQQ || []
+    const masterQQs = getMasterQQs()
     const operatorMember = e.group.pickMember(e.operator_id)
     const botMember = e.group.pickMember(e.self_id)
     

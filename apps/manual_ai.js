@@ -1,20 +1,17 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import xrkconfig from '../lib/xrkconfig.js';
-import { readConfigSync } from '../lib/config-paths.js';
+import { loadAiDict, findMatchInDict, normalizeMessage } from '../lib/ai-dict.js';
 
-/** 词库数据：data/xrkconfig/ai.json */
-const aiData = (() => {
-  const raw = readConfigSync('ai', 'json');
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
-  if (!raw) logger.warn('[人工AI] 未找到 data/xrkconfig/ai.json，当前不使用词库回复');
-  return {};
-})();
+function hasImages(e) {
+  if (!e.img) return false;
+  return Array.isArray(e.img) ? e.img.length > 0 : true;
+}
 
 export class ExamplePlugin extends plugin {
   constructor() {
     super({
       name: 'ai',
-      dsc: '简单开发示例',
+      dsc: '向日葵词库人工AI',
       event: 'message',
       priority: -10000,
       rule: [
@@ -25,19 +22,14 @@ export class ExamplePlugin extends plugin {
     });
   }
 
-  async handleResponse(e) {
-    const userMessage = e.msg;
-    const responseKey = this.findMatch(userMessage, aiData);
-    if (responseKey && aiData[responseKey]) {
-      const responses = aiData[responseKey];
-      const reply = responses[Math.floor(Math.random() * responses.length)];
-      await e.reply(reply, true);
-    }
-  }
-
-  findMatch(msg, json) {
-    if (!msg) return null;
-    return Object.keys(json).find(key => key === msg) || null;
+  /** 群聊 onlyReplyAt 时仍允许词库命中（在 loader.accept 之后生效） */
+  async accept(e) {
+    if (!xrkconfig.peopleai || hasImages(e)) return false;
+    const key = findMatchInDict(e.msg, loadAiDict());
+    if (!key) return false;
+    e._xrkPeopleAiBypass = true;
+    e._xrkPeopleAiKey = key;
+    return true;
   }
 
   async activateAi(e) {
@@ -54,8 +46,14 @@ export class ExamplePlugin extends plugin {
 
   async aiHandler(e) {
     if (!xrkconfig.peopleai) return false;
-    if (e.img) return false;
-    await this.handleResponse(e);
-    return false;
+    if (hasImages(e)) return false;
+
+    const dict = loadAiDict();
+    const key = e._xrkPeopleAiKey || findMatchInDict(e.msg, dict);
+    if (!key || !dict[key]?.length) return false;
+
+    const reply = dict[key][Math.floor(Math.random() * dict[key].length)];
+    await e.reply(reply, true);
+    return true;
   }
 }
