@@ -9,7 +9,7 @@ import {
   createHtmlTemplate,
   saveAndScreenshot,
   ensurePluginDataLoaded
-} from './plugintool.js';
+} from '../lib/plugintool.js';
 import BotUtil from '../../../lib/util.js';
 
 export class ManagePlugin extends plugin {

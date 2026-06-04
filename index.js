@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
 import hub from './lib/xrk-hub.js';
+import plugin from '../../lib/plugins/plugin.js';
 
 hub.startWatch();
 
@@ -95,6 +96,17 @@ files.forEach((file) => {
 ret = await Promise.allSettled(ret);
 
 let apps = {};
+
+function isPluginClass(exported) {
+  if (typeof exported !== 'function' || !exported.prototype) return false;
+  let proto = exported.prototype;
+  while (proto) {
+    if (proto instanceof plugin) return true;
+    proto = Object.getPrototypeOf(proto);
+  }
+  return false;
+}
+
 for (let i in files) {
   let name = files[i].replace('.js', '');
   
@@ -103,11 +115,16 @@ for (let i in files) {
     logger.error(ret[i].reason);
     continue;
   }
-  
-  apps[name] = ret[i].value[Object.keys(ret[i].value)[0]];
-  for (const [exportName, exported] of Object.entries(ret[i].value)) {
-    if (typeof exported !== 'function') continue;
-    if (exportName === Object.keys(ret[i].value)[0]) continue;
+
+  const mod = ret[i].value;
+  const entries = Object.entries(mod);
+  const mainExport = entries.find(([, exported]) => isPluginClass(exported))?.[1];
+  if (!mainExport) continue;
+
+  apps[name] = mainExport;
+  for (const [exportName, exported] of entries) {
+    if (exported === mainExport) continue;
+    if (!isPluginClass(exported)) continue;
     apps[`${name}:${exportName}`] = exported;
   }
 }

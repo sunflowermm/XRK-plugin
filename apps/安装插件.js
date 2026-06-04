@@ -15,7 +15,7 @@ import {
   updatePluginRemote,
   execCommand,
   generateTextPluginInfo
-} from './plugintool.js'
+} from '../lib/plugintool.js'
 import BotUtil from '../../../lib/util.js'
 import { restart } from '../lib/restart.js'
 
