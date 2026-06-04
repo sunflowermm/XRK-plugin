@@ -3,13 +3,20 @@
 
 enabled: false
 
-# 渲染精度（将映射为 deviceScaleFactor）
-quality: 2
+# 渲染精度（映射为 deviceScaleFactor）
+quality: 1.5
 
-# 默认视口（会映射到 screenshotConfig 的 width/height）
+# 默认视口（首屏截图宽度，避免超长整页图在 QQ 里缩成细条）
 viewport:
-  width: 1536
-  height: 2138
+  width: 1280
+  height: 900
+
+# 整页模式：默认 false（仅首屏）；true 时由 maxFullPageHeight 限制高度
+maxFullPageHeight: 6000
+lazyLoadScroll: true
+imageWaitTimeout: 3000
+delayBeforeScreenshot: 2000
+pageGotoTimeout: 60000
 
 # 页面等待策略（传给渲染器）
 waitUntil: networkidle2
@@ -124,11 +131,15 @@ blockedExtensions:
   code: [js, css, py, php, bat, cmd, vbs]
   fonts: [ttf, otf, woff, woff2, eot]
 
-# 截图参数（透传给 takeScreenshot -> RendererLoader.getRenderer().screenshot）
+# 截图参数（透传给 lib/web-screenshot.js -> 渲染器）
 screenshotConfig:
-  width: 1536
-  height: 2138
+  width: 1280
+  height: 900
   waitUntil: networkidle2
-  fullPage: true
+  fullPage: false
+  maxFullPageHeight: 6000
+  lazyLoadScroll: true
+  imageWaitTimeout: 3000
+  delayBeforeScreenshot: 2000
   imgType: jpeg
-  quality: 100
+  quality: 85

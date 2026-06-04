@@ -59,6 +59,6 @@ export class GlobalEmojiPlugin extends plugin {
             console.error("触发全局表情时出错:", error);
         }
         
-        return true;
+        return false;
     }
 }

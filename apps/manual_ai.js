@@ -22,16 +22,6 @@ export class ExamplePlugin extends plugin {
     });
   }
 
-  /** 群聊 onlyReplyAt 时仍允许词库命中（在 loader.accept 之后生效） */
-  async accept(e) {
-    if (!hub.peopleai || hasImages(e)) return false;
-    const key = findMatchInDict(e.msg, hub.aiDict);
-    if (!key) return false;
-    e._xrkPeopleAiBypass = true;
-    e._xrkPeopleAiKey = key;
-    return true;
-  }
-
   async activateAi(e) {
     if (!e.isMaster) return;
     hub.set('peopleai', true);
@@ -49,7 +39,7 @@ export class ExamplePlugin extends plugin {
     if (hasImages(e)) return false;
 
     const dict = hub.aiDict;
-    const key = e._xrkPeopleAiKey || findMatchInDict(e.msg, dict);
+    const key = findMatchInDict(e.msg, dict);
     if (!key || !dict[key]?.length) return false;
 
     const reply = dict[key][Math.floor(Math.random() * dict[key].length)];
