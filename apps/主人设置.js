@@ -3,7 +3,7 @@ import plugin from '../../../lib/plugins/plugin.js';
 import Cfg from '../../../lib/config/config.js';
 import YAML from 'yaml';
 import fs from 'fs';
-import xrkconfig from '../components/xrkconfig.js';
+import hub from '../lib/xrk-hub.js';
 
 const ROOT_PATH = process.cwd();
 
@@ -102,12 +102,10 @@ export class Example extends plugin {
     const otherConfig = Cfg.getConfig('other');
     otherConfig.masterQQ = otherConfig.masterQQ || [];
 
-    xrkconfig.config.coremaster = targetQQ;
+    hub.set('coremaster', targetQQ);
     if (!otherConfig.masterQQ.includes(targetQQ)) {
       otherConfig.masterQQ.push(targetQQ);
     }
-
-    xrkconfig.save();
     this.saveAndReloadOtherConfig(otherConfig);
     logger.info(`核心主人设置成功：${targetQQ}`);
     await e.reply(`已将 ${targetQQ} 设置为核心主人`);
@@ -160,7 +158,7 @@ export class Example extends plugin {
     const otherConfig = Cfg.getConfig('other');
     otherConfig.masterQQ = otherConfig.masterQQ || [];
 
-    if (targetQQ == xrkconfig.coremaster) {
+    if (targetQQ == hub.coremaster) {
       await e.reply('滚啊，你不能删核心主人');
       return;
     }

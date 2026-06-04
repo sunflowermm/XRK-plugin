@@ -1,11 +1,12 @@
 /**
  * 向日葵插件配置（多文件，对齐 system.js）
  * 子配置：config、help_system、ai、poke_responses、time_config、screenshot、weather、安装插件列表(5)
- * 读写 data/xrkconfig/*，与 lib/xrkconfig.js、lib/help_system.js 共用
+ * 读写 data/xrkconfig/*，变更后由 lib/xrk-hub.js 统一 reload
  */
 import path from 'path';
 import ConfigBase from '../../../lib/commonconfig/commonconfig.js';
-
+import { normalizeTimeMessages, timeMessagesToFormRows } from '../lib/config-normalize.js';
+import hub from '../lib/xrk-hub.js';
 // 使用相对路径，交由 ConfigBase 基类基于项目根目录进行拼接，
 // 避免出现「cwd + 绝对路径」导致的路径重复问题。
 const XRK_CONFIG_DIR = path.join('data', 'xrkconfig');
@@ -506,9 +507,9 @@ export default class XrkConfig extends ConfigBase {
             reply_mode: {
               type: 'string',
               label: '回复形式',
-              description: '当前仅实现 text 文本卡片',
-              enum: ['text'],
-              default: 'text',
+              description: 'text 为文字卡片，image 为官网预报区截图',
+              enum: ['text', 'image'],
+              default: 'image',
               component: 'Select'
             },
             user_agent: {
@@ -517,6 +518,24 @@ export default class XrkConfig extends ConfigBase {
               description: '访问 nmc.cn 时使用的浏览器标识',
               default: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
               component: 'Input'
+            },
+            include_charts: { type: 'boolean', label: '截图含预报图表', default: true, component: 'Switch' },
+            include_climate: { type: 'boolean', label: '截图含气候曲线', default: true, component: 'Switch' },
+            screenshot: {
+              type: 'object',
+              label: '截图参数',
+              component: 'SubForm',
+              fields: {
+                mode: { type: 'string', label: '模式', enum: ['live', 'html'], default: 'live', component: 'Select' },
+                width: { type: 'number', label: '宽度', min: 800, default: 1500, component: 'InputNumber' },
+                height: { type: 'number', label: '高度', min: 600, default: 1000, component: 'InputNumber' },
+                deviceScaleFactor: { type: 'number', label: '渲染精度', min: 1, max: 3, default: 2, component: 'InputNumber' },
+                waitUntil: { type: 'string', label: '等待策略', enum: ['domcontentloaded', 'load', 'networkidle0', 'networkidle2'], default: 'networkidle2', component: 'Select' },
+                goto_timeout_ms: { type: 'number', label: '页面加载超时(ms)', min: 5000, default: 45000, component: 'InputNumber' },
+                delayBeforeScreenshot: { type: 'number', label: '截图前延迟(ms)', min: 0, default: 3500, component: 'InputNumber' },
+                imgType: { type: 'string', label: '输出格式', enum: ['jpeg', 'png'], default: 'jpeg', component: 'Select' },
+                quality: { type: 'number', label: 'JPEG质量', min: 1, max: 100, default: 92, component: 'InputNumber' }
+              }
             }
           }
         }
@@ -564,6 +583,16 @@ export default class XrkConfig extends ConfigBase {
             blacklistIPs: { type: 'array', label: 'IP黑名单(CIDR)', itemType: 'string', default: [], component: 'Tags' },
             allowedLocalAddresses: { type: 'array', label: '允许的本地地址', itemType: 'string', default: ['localhost', '127.0.0.1'], component: 'Tags' },
             filteredParams: { type: 'array', label: '过滤的URL参数', itemType: 'string', default: [], component: 'Tags' },
+            blockedExtensions: {
+              type: 'object',
+              label: '拦截的文件扩展名',
+              description: '键为分类名，值为扩展名数组',
+              component: 'SubForm',
+              fields: {
+                media: { type: 'array', label: '媒体', itemType: 'string', default: ['mp4', 'mp3', 'avi'], component: 'Tags' },
+                archive: { type: 'array', label: '压缩包', itemType: 'string', default: ['zip', 'rar', '7z'], component: 'Tags' }
+              }
+            },
             screenshotConfig: {
               type: 'object',
               label: '截图参数',
@@ -728,6 +757,13 @@ export default class XrkConfig extends ConfigBase {
       const raw = await this._invoke(name, 'read');
       return { entries: Object.entries(raw || {}).map(([keyword, replies]) => ({ keyword, replies: Array.isArray(replies) ? replies : [] })) };
     }
+    if (name === 'time_config') {
+      const raw = await this._invoke(name, 'read');
+      return {
+        emojis: Array.isArray(raw?.emojis) ? raw.emojis : [],
+        timeMessages: timeMessagesToFormRows(raw?.timeMessages)
+      };
+    }
     if (PLUGIN_LIST_NAMES.includes(name)) {
       const raw = await this._invoke(name, 'read');
       const arr = Array.isArray(raw) ? raw : [];
@@ -744,6 +780,7 @@ export default class XrkConfig extends ConfigBase {
 
   async write(name, data, options = {}) {
     if (!name) throw new Error('XrkConfig 写入需要指定子配置名称');
+    let result;
     if (name === 'ai' && data && Array.isArray(data.entries)) {
       const obj = {};
       for (const { keyword, replies } of data.entries) {
@@ -751,7 +788,18 @@ export default class XrkConfig extends ConfigBase {
           obj[String(keyword).trim()] = Array.isArray(replies) ? replies : [];
         }
       }
-      return this._invoke(name, 'write', obj, options);
+      result = await this._invoke(name, 'write', obj, options);
+      hub.reload(name);
+      return result;
+    }
+    if (name === 'time_config' && data && typeof data === 'object') {
+      const payload = {
+        emojis: Array.isArray(data.emojis) ? data.emojis : [],
+        timeMessages: normalizeTimeMessages(data.timeMessages)
+      };
+      result = await this._invoke(name, 'write', payload, options);
+      hub.reload(name);
+      return result;
     }
     if (PLUGIN_LIST_NAMES.includes(name) && data && Array.isArray(data.list)) {
       const arr = data.list
@@ -763,9 +811,13 @@ export default class XrkConfig extends ConfigBase {
           description: String(item.description ?? '').trim(),
           git: String(item.git ?? '').trim()
         }));
-      return this._invoke(name, 'write', arr, options);
+      result = await this._invoke(name, 'write', arr, options);
+      hub.reload(name);
+      return result;
     }
-    return this._invoke(name, 'write', data, options);
+    result = await this._invoke(name, 'write', data, options);
+    if (name) hub.reload(name);
+    return result;
   }
 
   async get(name, keyPath) {
@@ -773,7 +825,9 @@ export default class XrkConfig extends ConfigBase {
   }
 
   async set(name, keyPath, value, options = {}) {
-    return this._invoke(name, 'set', keyPath, value, options);
+    const result = await this._invoke(name, 'set', keyPath, value, options);
+    if (name) hub.reload(name);
+    return result;
   }
 
   getStructure() {

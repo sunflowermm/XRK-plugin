@@ -3,8 +3,9 @@
  */
 import lodash from 'lodash'
 import yaml from 'yaml'
-import xrkconfig from './lib/xrkconfig.js'
-import { readConfigSync, getConfigPath } from './lib/config-paths.js'
+import hub from './lib/xrk-hub.js'
+import { getConfigPath } from './lib/config-paths.js'
+import { getDefaultMainConfig } from './lib/config-normalize.js'
 import { FileUtils } from '../../lib/utils/file-utils.js'
 import { allGuobaSchemas } from './guoba.schemas.js'
 
@@ -164,7 +165,7 @@ function mergeWithExisting(cfgKey, payload) {
   const meta = EXTRA_FILE_MAP[cfgKey]
   if (!meta) return payload
   if (cfgKey === 'ai_cfg' || PLUGIN_CFG_KEYS.includes(cfgKey)) return payload
-  const existing = readConfigSync(meta.file, meta.ext)
+  const existing = hub.readDisk(meta.file)
   if (existing == null) return payload
   return lodash.merge({}, existing, payload)
 }
@@ -172,7 +173,7 @@ function mergeWithExisting(cfgKey, payload) {
 function loadExtraForGuoba(key) {
   const meta = EXTRA_FILE_MAP[key]
   if (!meta) return null
-  const raw = readConfigSync(meta.file, meta.ext)
+  const raw = hub.readDisk(meta.file)
   if (key === 'ai_cfg') return aiToGuoba(raw)
   if (key === 'time_cfg') return timeToGuoba(raw)
   if (PLUGIN_CFG_KEYS.includes(key)) return pluginListToGuoba(raw)
@@ -197,7 +198,7 @@ export function supportGuoba() {
     configInfo: {
       schemas: allGuobaSchemas,
       getConfigData() {
-        const base = formatTimeSlotsForGuoba(lodash.cloneDeep(xrkconfig.config))
+        const base = formatTimeSlotsForGuoba(lodash.cloneDeep(hub.config))
         const extra = {}
         for (const key of EXTRA_CFG_KEYS) {
           extra[key] = loadExtraForGuoba(key)
@@ -215,15 +216,15 @@ export function supportGuoba() {
 
         parseTimeSlotsFromGuoba(patch)
 
-        const merged = lodash.merge({}, xrkconfig.getDefaultConfig(), xrkconfig.config, patch)
-        xrkconfig.config = merged
-        xrkconfig.save()
-        xrkconfig.emit('change')
+        const merged = lodash.merge({}, getDefaultMainConfig(), hub.config, patch)
+        hub.config = merged
+        hub.save()
 
         for (const [cfgKey, meta] of Object.entries(EXTRA_FILE_MAP)) {
           if (extra[cfgKey] == null) continue
           const payload = mergeWithExisting(cfgKey, serializeExtra(cfgKey, extra[cfgKey]))
           writeConfigFile(meta.file, meta.ext, payload)
+          hub.reload(meta.file)
         }
 
         return Result.ok({}, '向日葵配置已保存~')

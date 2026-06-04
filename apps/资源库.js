@@ -1,6 +1,6 @@
 import plugin from '../../../lib/plugins/plugin.js';
-import { 解析网页json } from '../components/config.js';
-import xrkconfig from '../components/xrkconfig.js';
+import hub from '../lib/xrk-hub.js';
+import { fetchJson } from '../lib/fetch-json.js';
 
 const URLS = {
   img: {
@@ -48,7 +48,7 @@ export class AvatarPlugin extends plugin {
   }
 
   async checkSharing() {
-    if (!xrkconfig.sharing) return false;
+    if (!hub.sharing) return false;
     return true;
   }
 
@@ -60,14 +60,14 @@ export class AvatarPlugin extends plugin {
 
   async sendVideo(url) {
     if (!await this.checkSharing()) return false;
-    const data = await 解析网页json(url);
+    const data = await fetchJson(url);
     if (data.status !== 'success') return false;
     await this.e.reply([segment.video(data.link), '看吧涩批！']);
   }
 
   async img_random(e) {
     if (!await this.checkSharing()) return false;
-    const data = await 解析网页json(URLS.img.random);
+    const data = await fetchJson(URLS.img.random);
     if (data.code !== '200') return false;
     return this.sendImg(data.imgurl);
   }

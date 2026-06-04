@@ -1,11 +1,13 @@
+import plugin from '../../../lib/plugins/plugin.js'
 import common from '../../../lib/common/common.js'
-import xrkcfg from '../lib/xrkconfig.js';
+import hub from '../lib/xrk-hub.js'
+import { bindHub } from '../lib/xrk-runtime.js'
 import fs from 'fs'
 import path from 'path'
 import fetch from 'node-fetch'
 import { FileUtils } from '../../../lib/utils/file-utils.js'
-import { getConfigPath, readConfigSync } from '../lib/config-paths.js'
-import { getMasterQQs } from '../lib/master-qq.js'
+
+const xrkcfg = hub
 const ROOT_PATH = process.cwd()
 const DEFAULT_IMAGE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/emoji/戳一戳表情')
 const DEFAULT_VOICE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/voice')
@@ -22,13 +24,7 @@ function getVoiceDir() {
   return cfg ? path.isAbsolute(cfg) ? cfg : path.join(ROOT_PATH, cfg) : DEFAULT_VOICE_DIR
 }
 
-// 加载响应配置（data/xrkconfig/poke_responses.json）
-const responses = (() => {
-  const raw = readConfigSync('poke_responses', 'json')
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw
-  logger.warn('[戳一戳] 未找到 data/xrkconfig/poke_responses.json，使用默认响应')
-  return { relationship: { stranger: ["戳什么戳！"] }, mood: {}, achievements: {} }
-})()
+// 戳一戳文案由 xrk-hub 统一加载
 
 // 内存存储实现
 const memoryStorage = {
@@ -116,6 +112,16 @@ const DEFAULT_USER_STATE = {
 
 const MOOD_RANGES = { angry: 20, sad: 40, normal: 60, happy: 80, excited: 100 }
 
+let pokeEngineInstance = null
+
+function registerPokeEngine(instance) {
+  pokeEngineInstance = instance
+}
+
+function getPokeEngine() {
+  return pokeEngineInstance
+}
+
 export class UniversalPoke extends plugin {
   constructor() {
     super({
@@ -125,7 +131,14 @@ export class UniversalPoke extends plugin {
       priority: xrkcfg.poke?.priority ?? xrkcfg.poke_priority ?? -5000,
       rule: [{ fnc: 'handlePoke', log: false }]
     })
+    registerPokeEngine(this)
     this.init()
+    bindHub(this, {
+      events: ['config', 'poke_responses'],
+      apply: (p) => {
+        p.priority = hub.poke?.priority ?? hub.poke_priority ?? -5000
+      }
+    })
   }
 
   /** 初始化模块系统 */
@@ -167,7 +180,7 @@ export class UniversalPoke extends plugin {
         execute: this.punishmentSystem.bind(this)
       },
       pokeback: {
-        enabled: modules.pokeback ?? false,
+        enabled: modules.pokeback ?? true,
         execute: this.pokebackSystem.bind(this)
       },
       image: {
@@ -175,7 +188,7 @@ export class UniversalPoke extends plugin {
         execute: this.sendImage.bind(this)
       },
       voice: {
-        enabled: modules.voice ?? false,
+        enabled: modules.voice ?? true,
         execute: this.sendVoice.bind(this)
       },
       master: {
@@ -187,6 +200,21 @@ export class UniversalPoke extends plugin {
     this.startScheduledTasks()
   }
 
+  getResponses() {
+    return hub.pokeResponses
+  }
+
+  /** 运行时读取 poke.modules 开关（与 commonconfig 一致） */
+  isModuleEnabled(name) {
+    const modules = xrkcfg.poke?.modules || {}
+    const defaults = {
+      daily_rewards: true, festival: true, basic: true, mood: true, intimacy: true,
+      achievement: true, special: true, punishment: true, pokeback: true,
+      image: true, voice: true, master: true
+    }
+    return modules[name] ?? defaults[name] ?? true
+  }
+
   /** 主处理函数 */
   async handlePoke(e) {
     try {
@@ -196,25 +224,7 @@ export class UniversalPoke extends plugin {
       // 忽略自己戳自己
       if (e.operator_id === e.target_id) return true
 
-      // 获取身份信息
-      const identities = await this.getIdentities(e)
-      
-      // 检查是否戳主人
-      const masterQQs = getMasterQQs()
-      const targetIsMaster = masterQQs.includes(String(e.target_id))
-      const operatorIsMaster = identities.operatorIsMaster
-
-      // 戳一戳主人：须开启 chuomaster，非主人戳主人时触发保护
-      if (
-        xrkcfg.chuomaster &&
-        targetIsMaster &&
-        !operatorIsMaster &&
-        this.modules.master.enabled
-      ) {
-        return await this.handleMasterPoke(e, identities)
-      }
-
-      // 只处理戳机器人的情况
+      // 只处理戳机器人的情况（戳主人保护见 MasterPokeProtection）
       if (e.target_id !== e.self_id) return false
 
       // 检查冷却时间
@@ -228,8 +238,10 @@ export class UniversalPoke extends plugin {
       // 更新基础信息
       await this.updateBasicInfo(e, userState)
 
+      const identities = await this.getIdentities(e)
+
       // 执行启用的模块
-      const moduleResults = await this.executeModules(e, userState, identities)
+      await this.executeModules(e, userState, identities)
 
       // 保存用户状态
       await this.saveUserState(e.operator_id, userState)
@@ -255,14 +267,14 @@ export class UniversalPoke extends plugin {
       record.count++
       await this.saveMasterPokeRecord(e.group_id, e.operator_id, record)
       
-      let replyPool = responses.master_protection?.normal || ["不许戳主人！"]
+      let replyPool = this.getResponses().master_protection?.normal || ["不许戳主人！"]
       
       if (identities.operatorIsOwner) {
-        replyPool = responses.master_protection?.owner_warning || replyPool
+        replyPool = this.getResponses().master_protection?.owner_warning || replyPool
       } else if (identities.operatorIsAdmin) {
-        replyPool = responses.master_protection?.admin_warning || replyPool
+        replyPool = this.getResponses().master_protection?.admin_warning || replyPool
       } else if (record.count > 5) {
-        replyPool = responses.master_protection?.repeat_offender || replyPool
+        replyPool = this.getResponses().master_protection?.repeat_offender || replyPool
       }
       
       const reply = replyPool[Math.floor(Math.random() * replyPool.length)]
@@ -316,11 +328,11 @@ export class UniversalPoke extends plugin {
         
         try {
           await e.group.muteMember(e.operator_id, muteTime)
-          const muteReplies = responses.master_protection?.punishments?.mute || ["禁言！"]
+          const muteReplies = this.getResponses().master_protection?.punishments?.mute || ["禁言！"]
           const reply = muteReplies[Math.floor(Math.random() * muteReplies.length)]
           await e.reply(reply.replace(/{time}/g, Math.floor(muteTime / 60)))
         } catch (err) {
-          const failReplies = responses.master_protection?.punishments?.mute_fail || ["禁言失败..."]
+          const failReplies = this.getResponses().master_protection?.punishments?.mute_fail || ["禁言失败..."]
           const reply = failReplies[Math.floor(Math.random() * failReplies.length)]
           await e.reply(reply)
         }
@@ -329,7 +341,7 @@ export class UniversalPoke extends plugin {
       // 反戳惩罚（概率从配置 master_chances.pokeback 读取）
       const pokebackChance = xrkcfg.poke?.master_chances?.pokeback ?? 0.7
       if (xrkcfg.poke?.pokeback_enabled && Math.random() < pokebackChance) {
-        const pokeReplies = responses.master_protection?.punishments?.poke || ["反击！"]
+        const pokeReplies = this.getResponses().master_protection?.punishments?.poke || ["反击！"]
         const reply = pokeReplies[Math.floor(Math.random() * pokeReplies.length)]
         await e.reply(reply)
         
@@ -363,7 +375,7 @@ export class UniversalPoke extends plugin {
 
   /** 获取身份信息 */
   async getIdentities(e) {
-    const masterQQs = getMasterQQs()
+    const masterQQs = hub.getMasterQQs()
     const operatorMember = e.group.pickMember(e.operator_id)
     const botMember = e.group.pickMember(e.self_id)
     
@@ -444,7 +456,7 @@ export class UniversalPoke extends plugin {
     
     for (const name of moduleOrder) {
       const module = this.modules[name]
-      if (module && module.enabled) {
+      if (module && this.isModuleEnabled(name)) {
         try {
           results[name] = await module.execute(e, userState, identities)
           
@@ -472,7 +484,7 @@ export class UniversalPoke extends plugin {
   /** 每日奖励模块 */
   async dailyRewardsSystem(e, userState) {
     const dailyCount = await this.getDailyCount(e.operator_id)
-    const rewards = responses.daily_rewards || {}
+    const rewards = this.getResponses().daily_rewards || {}
     const p = xrkcfg.poke?.chances || {}
 
     if (dailyCount === 1 && rewards.first?.length && Math.random() < (p.daily_first ?? 0.6)) {
@@ -490,7 +502,7 @@ export class UniversalPoke extends plugin {
   async festivalEffects(e, userState) {
     const festival = this.getCurrentFestival()
     if (!festival) return false
-    const replies = responses.festival_effects?.[festival]
+    const replies = this.getResponses().festival_effects?.[festival]
     const chance = xrkcfg.poke?.chances?.festival ?? 0.15
     if (!replies?.length || Math.random() > chance) return false
     return this.sendFromPool(e, replies, userState, '🎉 ')
@@ -528,7 +540,7 @@ export class UniversalPoke extends plugin {
     userState.mood = Object.entries(MOOD_RANGES).find(([, v]) => userState.moodValue < v)?.[0] || 'excited'
 
     if (Math.abs(moodChange) > 10 && Math.random() < (p.mood_reply ?? 0.5)) {
-      return this.sendFromPool(e, responses.mood?.[userState.mood], userState)
+      return this.sendFromPool(e, this.getResponses().mood?.[userState.mood], userState)
     }
     return false
   }
@@ -548,7 +560,7 @@ export class UniversalPoke extends plugin {
     userState.relationship = this.getRelationshipLevel(userState.intimacy)
     
     if (oldRelationship !== userState.relationship) {
-      const upgradeReplies = responses.relationship?.upgrade?.[userState.relationship]
+      const upgradeReplies = this.getResponses().relationship?.upgrade?.[userState.relationship]
       if (upgradeReplies && upgradeReplies.length > 0) {
         const reply = upgradeReplies[Math.floor(Math.random() * upgradeReplies.length)]
         await e.reply([
@@ -586,7 +598,7 @@ export class UniversalPoke extends plugin {
     for (const c of checks) {
       if (c.condition && !userState.achievements.includes(c.id)) {
         userState.achievements.push(c.id)
-        const pool = responses.achievements?.[c.id] || responses.achievements?.default || ['成就达成！']
+        const pool = this.getResponses().achievements?.[c.id] || this.getResponses().achievements?.default || ['成就达成！']
         await this.sendFromPool(e, pool, userState, `🏆 获得成就【${c.name}】\n`)
         return true
       }
@@ -601,15 +613,15 @@ export class UniversalPoke extends plugin {
 
     if (Math.random() < (p.special_trigger ?? 0.15)) {
       const timeEffect = this.getTimeEffect(new Date().getHours())
-      if (timeEffect && responses.time_effects?.[timeEffect]) {
-        return this.sendFromPool(e, responses.time_effects[timeEffect], userState)
+      if (timeEffect && this.getResponses().time_effects?.[timeEffect]) {
+        return this.sendFromPool(e, this.getResponses().time_effects[timeEffect], userState)
       }
     }
     if (Math.random() < (p.special_effect_extra ?? 0.1) && userState.intimacy > 50) {
-      const effects = Object.keys(responses.special_effects || {})
+      const effects = Object.keys(this.getResponses().special_effects || {})
       if (effects.length) {
         const effect = effects[Math.floor(Math.random() * effects.length)]
-        return this.sendFromPool(e, responses.special_effects[effect], userState, '✨ ')
+        return this.sendFromPool(e, this.getResponses().special_effects[effect], userState, '✨ ')
       }
     }
     return false
@@ -629,14 +641,14 @@ export class UniversalPoke extends plugin {
     if (this.canMute(identities) && Math.random() < muteChance) {
       try {
         await e.group.muteMember(e.operator_id, Math.min(60 * userState.consecutivePokes, 1800))
-        return this.sendFromPool(e, responses.punishments?.mute?.success || ['禁言成功！'], userState)
+        return this.sendFromPool(e, this.getResponses().punishments?.mute?.success || ['禁言成功！'], userState)
       } catch {
-        return this.sendFromPool(e, responses.punishments?.mute?.fail || ['禁言失败...'], userState)
+        return this.sendFromPool(e, this.getResponses().punishments?.mute?.fail || ['禁言失败...'], userState)
       }
     }
     const reduction = Math.min(userState.consecutivePokes * 2, 20)
     userState.intimacy = Math.max(0, userState.intimacy - reduction)
-    const pool = (responses.punishments?.intimacy_reduction || ['亲密度下降了...']).map(r => r.replace(/{reduction}/g, reduction))
+    const pool = (this.getResponses().punishments?.intimacy_reduction || ['亲密度下降了...']).map(r => r.replace(/{reduction}/g, reduction))
     return this.sendFromPool(e, pool, userState)
   }
 
@@ -649,7 +661,7 @@ export class UniversalPoke extends plugin {
     if (identities.operatorIsMaster) chance -= 0.2
     if (Math.random() >= chance) return false
 
-    const pool = responses.pokeback?.[userState.mood] || responses.pokeback?.normal || ['戳回去！']
+    const pool = this.getResponses().pokeback?.[userState.mood] || this.getResponses().pokeback?.normal || ['戳回去！']
     if (!(await this.sendFromPool(e, pool, userState))) return false
     const pokeCount = Math.min(Math.floor(userState.consecutivePokes / 2), 5)
     for (let i = 0; i < pokeCount; i++) {
@@ -723,14 +735,14 @@ export class UniversalPoke extends plugin {
   getReplyPool(userState, identities) {
     let pool = []
 
-    const relationshipReplies = responses.relationship?.[userState.relationship] || responses.relationship?.stranger || []
+    const relationshipReplies = this.getResponses().relationship?.[userState.relationship] || this.getResponses().relationship?.stranger || []
     pool = [...relationshipReplies]
 
-    if (responses.mood?.[userState.mood]) {
-      pool = [...pool, ...responses.mood[userState.mood]]
+    if (this.getResponses().mood?.[userState.mood]) {
+      pool = [...pool, ...this.getResponses().mood[userState.mood]]
     }
 
-    const si = responses.special_identity || {}
+    const si = this.getResponses().special_identity || {}
     if (identities.operatorIsMaster && si.master?.length) pool = [...pool, ...si.master]
     else if (identities.operatorIsOwner && si.owner?.length) pool = [...pool, ...si.owner]
     else if (identities.operatorIsAdmin && si.admin?.length) pool = [...pool, ...si.admin]
@@ -844,6 +856,8 @@ export class UniversalPoke extends plugin {
 
   /** 定时任务 */
   startScheduledTasks() {
+    if (global.__xrkPokeTasksStarted) return
+    global.__xrkPokeTasksStarted = true
     // 每日重置
     setInterval(() => {
       const hour = new Date().getHours()
@@ -978,5 +992,42 @@ export class UniversalPoke extends plugin {
     } catch (err) {
       logger.error('[戳一戳] 保存主人戳戳记录失败:', err)
     }
+  }
+}
+
+/** 戳一戳主人保护：使用 corepoke_priority，与戳机器人逻辑分离 */
+export class MasterPokeProtection extends plugin {
+  constructor() {
+    super({
+      name: '向日葵戳一戳主人保护',
+      dsc: '非主人戳主人时的保护回复与惩罚',
+      event: 'notice.group.poke',
+      priority: xrkcfg.corepoke_priority ?? -5000,
+      rule: [{ fnc: 'handlePoke', log: false }]
+    })
+    bindHub(this, {
+      events: ['config'],
+      apply: (p) => {
+        p.priority = hub.corepoke_priority ?? -5000
+      }
+    })
+  }
+
+  async handlePoke(e) {
+    if (!hub.chuomaster || !hub.poke?.enabled) return false
+    if (e.operator_id === e.target_id) return true
+    if (!e.group_id) return false
+
+    const masterQQs = hub.getMasterQQs()
+    if (!masterQQs.includes(String(e.target_id))) return false
+
+    const poke = getPokeEngine()
+    if (!poke) return false
+
+    const identities = await poke.getIdentities(e)
+    if (identities.operatorIsMaster) return false
+    if (!poke.isModuleEnabled('master')) return false
+
+    return poke.handleMasterPoke(e, identities)
   }
 }

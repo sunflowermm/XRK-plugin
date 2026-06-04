@@ -1,6 +1,6 @@
 import plugin from '../../../lib/plugins/plugin.js';
-import xrkconfig from '../lib/xrkconfig.js';
-import { loadAiDict, findMatchInDict, normalizeMessage } from '../lib/ai-dict.js';
+import hub from '../lib/xrk-hub.js';
+import { findMatchInDict } from '../lib/config-normalize.js';
 
 function hasImages(e) {
   if (!e.img) return false;
@@ -24,8 +24,8 @@ export class ExamplePlugin extends plugin {
 
   /** 群聊 onlyReplyAt 时仍允许词库命中（在 loader.accept 之后生效） */
   async accept(e) {
-    if (!xrkconfig.peopleai || hasImages(e)) return false;
-    const key = findMatchInDict(e.msg, loadAiDict());
+    if (!hub.peopleai || hasImages(e)) return false;
+    const key = findMatchInDict(e.msg, hub.aiDict);
     if (!key) return false;
     e._xrkPeopleAiBypass = true;
     e._xrkPeopleAiKey = key;
@@ -34,21 +34,21 @@ export class ExamplePlugin extends plugin {
 
   async activateAi(e) {
     if (!e.isMaster) return;
-    xrkconfig.set('peopleai', true);
+    hub.set('peopleai', true);
     await e.reply('向日葵词库AI已开启');
   }
 
   async deactivateAi(e) {
     if (!e.isMaster) return;
-    xrkconfig.set('peopleai', false);
+    hub.set('peopleai', false);
     await e.reply('向日葵词库AI已关闭');
   }
 
   async aiHandler(e) {
-    if (!xrkconfig.peopleai) return false;
+    if (!hub.peopleai) return false;
     if (hasImages(e)) return false;
 
-    const dict = loadAiDict();
+    const dict = hub.aiDict;
     const key = e._xrkPeopleAiKey || findMatchInDict(e.msg, dict);
     if (!key || !dict[key]?.length) return false;
 

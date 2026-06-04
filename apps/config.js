@@ -1,5 +1,5 @@
 import plugin from '../../../lib/plugins/plugin.js';
-import xrkconfig from '../lib/xrkconfig.js';
+import hub from '../lib/xrk-hub.js';
 import BotUtil from '../../../lib/util.js';
 
 export class XrkSettings extends plugin {
@@ -24,7 +24,7 @@ export class XrkSettings extends plugin {
 
   async save() {
     try {
-      xrkconfig.save();
+      hub.save();
       return true;
     } catch (error) {
       console.error(`保存配置时出错: ${error.message}`);
@@ -33,7 +33,7 @@ export class XrkSettings extends plugin {
   }
 
   generateSettingsMessages(e) {
-    const c = xrkconfig.config;
+    const c = hub.config;
     const messages = [];
     messages.push('=== 向日葵插件设置 ===');
     messages.push('【戳一戳设置】');
@@ -68,7 +68,7 @@ export class XrkSettings extends plugin {
   }
 
   generateMasterInfo() {
-    const c = xrkconfig.config;
+    const c = hub.config;
     let masterMsg = '❯ 向日葵主人设置:';
     if (c.master && Object.keys(c.master).length > 0) {
       let hasMasters = false;
@@ -96,7 +96,7 @@ export class XrkSettings extends plugin {
     if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
     const priority = parseInt(e.msg.replace(/^#?(向日葵|xrk)修改帮助优先级/, '').trim());
     if (isNaN(priority) || priority % 1 !== 0) return await e.reply('❌ 请输入有效的整数数值');
-    xrkconfig.set('help_priority', priority);
+    hub.set('help_priority', priority);
     await e.reply(`✅ 帮助优先级已修改为: ${priority}`);
   }
 
@@ -104,7 +104,7 @@ export class XrkSettings extends plugin {
     if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
     const priority = parseInt(e.msg.replace(/^#?(向日葵|xrk)修改戳一戳优先级/, '').trim());
     if (isNaN(priority) || priority % 1 !== 0) return await e.reply('❌ 请输入有效的整数数值');
-    xrkconfig.set('poke_priority', priority);
+    hub.set('poke_priority', priority);
     await e.reply(`✅ 戳一戳优先级已修改为: ${priority}`);
   }
 
@@ -112,15 +112,15 @@ export class XrkSettings extends plugin {
     if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
     const priority = parseInt(e.msg.replace(/^#?(向日葵|xrk)修改戳一戳主人优先级/, '').trim());
     if (isNaN(priority) || priority % 1 !== 0) return await e.reply('❌ 请输入有效的整数数值');
-    xrkconfig.set('corepoke_priority', priority);
+    hub.set('corepoke_priority', priority);
     await e.reply(`✅ 戳一戳主人优先级已修改为: ${priority}`);
   }
 
   async toggleChuoMaster(e) {
     if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
     const isEnable = e.msg.includes('开启');
-    if (xrkconfig.chuomaster === isEnable) return await e.reply(`戳一戳主人已${isEnable ? '开启' : '关闭'}, 无需重复操作`);
-    xrkconfig.set('chuomaster', isEnable);
+    if (hub.chuomaster === isEnable) return await e.reply(`戳一戳主人已${isEnable ? '开启' : '关闭'}, 无需重复操作`);
+    hub.set('chuomaster', isEnable);
     await e.reply(`✅ 戳一戳主人已${isEnable ? '开启' : '关闭'}`);
   }
 
@@ -130,23 +130,23 @@ export class XrkSettings extends plugin {
     if (isNaN(quality) || quality < 1 || quality > 3 || !/^\d+(\.\d{0,2})?$/.test(quality.toString())) {
       return await e.reply('❌ 请输入1-3之间的数值，最多支持两位小数');
     }
-    xrkconfig.set('screen_shot_quality', quality);
+    hub.set('screen_shot_quality', quality);
     await e.reply(`✅ 渲染精度已修改为: ${quality}`);
   }
 
   async toggleScreenshot(e) {
     if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
     const isEnable = e.msg.includes('开启');
-    if (xrkconfig.screen_shot_http === isEnable) return await e.reply(`网页截图已${isEnable ? '开启' : '关闭'}, 无需重复操作`);
-    xrkconfig.set('screen_shot_http', isEnable);
+    if (hub.screen_shot_http === isEnable) return await e.reply(`网页截图已${isEnable ? '开启' : '关闭'}, 无需重复操作`);
+    hub.set('screen_shot_http', isEnable);
     await e.reply(`✅ 网页截图已${isEnable ? '开启' : '关闭'}`);
   }
 
   async toggleSharing(e) {
     if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
     const isEnable = e.msg.includes('开启');
-    if (xrkconfig.sharing === isEnable) return await e.reply(`资源分享已${isEnable ? '开启' : '关闭'}, 无需重复操作`);
-    xrkconfig.set('sharing', isEnable);
+    if (hub.sharing === isEnable) return await e.reply(`资源分享已${isEnable ? '开启' : '关闭'}, 无需重复操作`);
+    hub.set('sharing', isEnable);
     await e.reply(`✅ 资源分享已${isEnable ? '开启' : '关闭'}`);
   }
 

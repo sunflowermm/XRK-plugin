@@ -5,12 +5,12 @@ import path from "path";
 import { promisify } from "util";
 import { pipeline } from "stream";
 import { v4 as uuidv4 } from "uuid";
-import xrkconfig from "../components/xrkconfig.js";
+import hub from "../lib/xrk-hub.js";
 
 const _path = process.cwd();
 const baseConfig = {
   savePathBase: path.resolve(_path, "plugins/XRK-plugin/resources/emoji"),
-  defaultDirectory: "流浪摇滚",
+  defaultDirectory: "孤独摇滚",
   batchSize: 20,
   uuidFormat: /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
 };
@@ -18,12 +18,12 @@ let imageList = [];
 
 class FileManager {
   static loadConfig() {
-    return xrkconfig.emoji_filename || baseConfig.defaultDirectory;
+    return hub.emoji_filename || baseConfig.defaultDirectory;
   }
 
   static saveConfig(directoryName) {
     try {
-      xrkconfig.set('emoji_filename', directoryName);
+      hub.set('emoji_filename', directoryName);
       return true;
     } catch (error) {
       console.error("保存配置时出错:", error);

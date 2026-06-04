@@ -4,7 +4,7 @@ import path from 'path';
 import { exec } from 'child_process';
 import fetch from 'node-fetch';
 import { takeScreenshot } from '../components/util/takeScreenshot.js';
-import { readPluginListSync, getResourcesPluginsDir } from '../lib/plugin-lists.js';
+import hub, { RESOURCES_PLUGINS_DIR } from '../lib/xrk-hub.js';
 
 export let pluginData = {};
 
@@ -85,7 +85,7 @@ export const proxyList = [
     "https://www.ghproxy.cn"
 ];
 
-const PLUGINS_DIR = getResourcesPluginsDir();
+const PLUGINS_DIR = RESOURCES_PLUGINS_DIR;
 const PLUGIN_HTML_TEMPLATE = path.join(PLUGINS_DIR, 'template.html');
 const PLUGIN_SCREENSHOT_INDEX = path.join(PLUGINS_DIR, 'plugin_screenshots_index.json');
 const HTML_TEMP_DIR = path.join(process.cwd(), 'plugins/XRK-plugin/resources/help_other');
@@ -282,7 +282,7 @@ export function getCategoryByInput(input) {
 }
 
 function loadPluginsForCategory(category) {
-  const plugins = readPluginListSync(category.key);
+  const plugins = hub.getPluginList(category.key);
   updatePluginData(plugins);
   return plugins;
 }

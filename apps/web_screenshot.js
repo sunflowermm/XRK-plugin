@@ -2,8 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch';
 import { takeScreenshot } from '../components/util/takeScreenshot.js';
-import xrkconfig from '../lib/xrkconfig.js';
-import { readConfigSync } from '../lib/config-paths.js';
+import hub from '../lib/xrk-hub.js';
+import { bindHub } from '../lib/xrk-runtime.js';
 
 export class WebpageScreenshot extends plugin {
   constructor() {
@@ -20,43 +20,22 @@ export class WebpageScreenshot extends plugin {
         }
       ]
     });
-    this.loadConfig();
+    this.applyScreenshotConfig();
+    bindHub(this, {
+      events: ['config', 'screenshot'],
+      apply: () => this.applyScreenshotConfig()
+    });
   }
 
-  loadConfig() {
-    const cfg = readConfigSync('screenshot') || {};
+  applyScreenshotConfig() {
+    const rt = hub.getScreenshotRuntime();
+    this.config = rt.urlRules;
+    this.screenshotConfig = rt.screenshotConfig;
+    this._screenshotEnabled = rt.enabled;
+  }
 
-    // 兼容与默认值（配置统一由 data/xrkconfig/screenshot.yaml 管理）
-    this.config = {
-      blacklistDomains: cfg.blacklistDomains || [],
-      whitelistDomains: cfg.whitelistDomains || [],
-      blacklistIPs: cfg.blacklistIPs || [],
-      allowedLocalAddresses: cfg.allowedLocalAddresses || ['localhost', '127.0.0.1'],
-      blockedExtensions: cfg.blockedExtensions || {},
-      filteredParams: cfg.filteredParams || [],
-      urlProcessing: {
-        maxUrlsPerMessage: cfg.urlProcessing?.maxUrlsPerMessage ?? 2,
-        minUrlLength: cfg.urlProcessing?.minUrlLength ?? 8,
-        maxUrlLength: cfg.urlProcessing?.maxUrlLength ?? 300
-      }
-    };
-
-    // takeScreenshot 选项（合并 quality → deviceScaleFactor）
-    const viewportWidth = cfg.viewport?.width ?? 1024;
-    const viewportHeight = cfg.viewport?.height ?? 800;
-    this.screenshotConfig = {
-      width: viewportWidth,
-      height: viewportHeight,
-      deviceScaleFactor: cfg.quality ?? 2,
-      waitUntil: cfg.waitUntil ?? 'networkidle2',
-      imgType: 'png',
-      ...(cfg.screenshotConfig || {}),
-      // 兜底：若用户只配置了 viewport，则保持一致
-      width: (cfg.screenshotConfig && cfg.screenshotConfig.width) ? cfg.screenshotConfig.width : viewportWidth,
-      height: (cfg.screenshotConfig && cfg.screenshotConfig.height) ? cfg.screenshotConfig.height : viewportHeight,
-      // 强制以顶层 quality 为准（更直观）
-      deviceScaleFactor: cfg.quality ?? (cfg.screenshotConfig && cfg.screenshotConfig.deviceScaleFactor) ?? 2
-    };
+  isScreenshotEnabled() {
+    return this._screenshotEnabled ?? hub.getScreenshotRuntime().enabled;
   }
 
   extractUrls(message) {
@@ -268,7 +247,7 @@ export class WebpageScreenshot extends plugin {
   }
 
   async autoScreenshot(e) {
-    if (!xrkconfig.screen_shot_http) return false;
+    if (!this.isScreenshotEnabled()) return false;
     
     try {
       // 提取URL

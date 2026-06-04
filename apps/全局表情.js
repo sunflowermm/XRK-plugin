@@ -2,10 +2,10 @@ import plugin from "../../../lib/plugins/plugin.js";
 import fs from "fs";
 import path from "path";
 import { getGroupSettings } from "./全局表情设置.js";
-import xrkconfig from "../components/xrkconfig.js";
+import hub from "../lib/xrk-hub.js";
 
 async function sendRandomImage(e) {
-    const emojiDir = xrkconfig.emoji_filename;
+    const emojiDir = hub.emoji_filename;
     const imageDir = path.join(process.cwd(), `plugins/XRK-plugin/resources/emoji/${emojiDir}`);
     try {
         if (!fs.existsSync(imageDir)) {

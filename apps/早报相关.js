@@ -1,9 +1,9 @@
 /**
  * 早报设置与每日推送（白名单、推送时间、定时任务）
- * 配置读写统一走 xrkconfig（data/xrkconfig/config.yaml）
  */
 import plugin from '../../../lib/plugins/plugin.js';
-import xrkconfig from '../lib/xrkconfig.js';
+import hub from '../lib/xrk-hub.js';
+import { bindHub, rescheduleTask } from '../lib/xrk-runtime.js';
 
 export class SettingsPlugin extends plugin {
   constructor() {
@@ -19,18 +19,27 @@ export class SettingsPlugin extends plugin {
         { reg: /^#?(向日葵|xrk)?修改早报推送时间(\d+)$/, fnc: 'setPushTime' }
       ]
     });
-    const hour = xrkconfig.news_pushtime ?? 8;
     this.task = {
       name: '每日早报推送',
-      cron: `0 0 ${hour} * * ?`,
+      cron: `0 0 ${hub.news_pushtime ?? 8} * * ?`,
       fnc: () => this.scheduledPush()
     };
+    bindHub(this, {
+      events: ['config'],
+      apply: () => {
+        rescheduleTask(this, {
+          name: '每日早报推送',
+          cron: () => `0 0 ${hub.news_pushtime ?? 8} * * ?`,
+          fnc: this.scheduledPush
+        });
+      }
+    });
   }
 
   async scheduledPush() {
     const API_URL = 'https://api.03c3.cn/api/zb';
-    const delay = xrkconfig.news?.delay ?? 1000;
-    const list = xrkconfig.news_groupss || [];
+    const delay = hub.news?.delay ?? 1000;
+    const list = hub.news_groupss || [];
     try {
       const message = ['早安！这是今天的早报\n', segment.image(API_URL)];
       for (const groupId of list) {
@@ -56,7 +65,7 @@ export class SettingsPlugin extends plugin {
     const match = e.msg.match(/^#?(?:向日葵|xrk)?修改早报推送时间(\d+)$/);
     const newTime = match ? parseInt(match[1], 10) : NaN;
     if (isNaN(newTime) || newTime < 0 || newTime > 23) return await e.reply('请提供有效的时间（0-23）');
-    xrkconfig.set('news_pushtime', newTime);
+    hub.set('news_pushtime', newTime);
     await e.reply(`✅ 已将早报推送时间修改为 ${newTime} 点`);
   }
 
@@ -65,10 +74,10 @@ export class SettingsPlugin extends plugin {
     const match = e.msg.match(/^#?早报添加白名单(\d+)?$/);
     const groupId = match ? parseInt(match[1] || e.group_id, 10) : (e.group_id || 0);
     if (!groupId) return await e.reply('请在群聊中使用此命令或指定群号');
-    const list = [...(xrkconfig.news_groupss || [])];
+    const list = [...(hub.news_groupss || [])];
     if (list.includes(groupId)) return await e.reply('该群已在白名单中');
     list.push(groupId);
-    xrkconfig.set('news_groupss', list);
+    hub.set('news_groupss', list);
     await e.reply(`✅ 已将群 ${groupId} 添加到早报白名单`);
   }
 
@@ -77,15 +86,15 @@ export class SettingsPlugin extends plugin {
     const match = e.msg.match(/^#?早报删除白名单(\d+)?$/);
     const groupId = match ? parseInt(match[1] || e.group_id, 10) : (e.group_id || 0);
     if (!groupId) return await e.reply('请在群聊中使用此命令或指定群号');
-    const list = [...(xrkconfig.news_groupss || [])];
+    const list = [...(hub.news_groupss || [])];
     if (!list.includes(groupId)) return await e.reply('该群不在白名单中');
-    xrkconfig.set('news_groupss', list.filter(id => id !== groupId));
+    hub.set('news_groupss', list.filter(id => id !== groupId));
     await e.reply(`✅ 已将群 ${groupId} 从早报白名单中移除`);
   }
 
   async showWhitelist(e) {
     if (!e.isMaster) return await e.reply('只有主人才能命令我哦');
-    const list = xrkconfig.news_groupss || [];
+    const list = hub.news_groupss || [];
     if (list.length) await e.reply(`当前早报白名单群号：\n${list.join('\n')}`);
     else await e.reply('白名单为空');
   }

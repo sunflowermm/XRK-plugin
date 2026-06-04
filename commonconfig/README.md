@@ -35,8 +35,7 @@
 ## 与运行时关系
 
 - **锅巴** 通过根目录 `guoba.support.js` 编辑主配置常用字段（同一 `config.yaml`）；本目录负责 Web 控制台全量子配置。
-- **config** 与 **lib/xrkconfig.js** 共用 `data/xrkconfig/config.yaml`。
-- **help_system** 与 **lib/help_system.js** 共用 `data/xrkconfig/help_system.yaml`。
+- 所有子配置写入后由 **lib/xrk-hub.js** 统一 `reload`，与控制台、锅巴、指令侧热更新一致。
 - **ai**、**poke_responses**、**time_config** 由各 app 读取 `data/xrkconfig/*.json`。
 - **screenshot** 由 `apps/web_screenshot.js` 读取 `data/xrkconfig/screenshot.yaml`。
 - **插件列表** 由 `lib/plugin-lists.js` 提供路径与读取接口，模板在 `config/default/`。

@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
-import xrkconfig from './lib/xrkconfig.js';
+import hub from './lib/xrk-hub.js';
+
+hub.startWatch();
 
 // ========== 检查依赖是否缺失 ==========
 async function checkDependencies() {
@@ -103,11 +105,16 @@ for (let i in files) {
   }
   
   apps[name] = ret[i].value[Object.keys(ret[i].value)[0]];
+  for (const [exportName, exported] of Object.entries(ret[i].value)) {
+    if (typeof exported !== 'function') continue;
+    if (exportName === Object.keys(ret[i].value)[0]) continue;
+    apps[`${name}:${exportName}`] = exported;
+  }
 }
 
 logger.info(chalk.green(`✅ 成功加载 ${Object.keys(apps).length} 个插件`));
 logger.info(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
 
 // ========== 导出配置和应用 ==========
-const config = xrkconfig.config;
-export { apps, config };
+export { apps };
+export const config = hub.config;

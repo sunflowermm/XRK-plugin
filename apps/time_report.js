@@ -2,8 +2,9 @@ import plugin from '../../../lib/plugins/plugin.js';
 import moment from 'moment';
 import fs from 'fs';
 import path from 'path';
-import xrkconfig from '../lib/xrkconfig.js';
-import { readConfigSync } from '../lib/config-paths.js';
+import hub from '../lib/xrk-hub.js';
+import { bindHub } from '../lib/xrk-runtime.js';
+
 const ROOT_PATH = process.cwd();
 const PLUGIN_PATH = path.join(ROOT_PATH, 'plugins/XRK-plugin');
 const IMAGE_DIR_PATH = path.join(PLUGIN_PATH, 'resources/emoji/整点报时图库');
@@ -22,13 +23,13 @@ export class WhitelistManager extends plugin {
       ]
     });
     this.task = { name: '整点报时任务', cron: '0 0 * * * *', fnc: () => this.hourlyNotification() };
-    this.timeConfig = this.loadTimeConfig();
-  }
-
-  loadTimeConfig() {
-    const raw = readConfigSync('time_config', 'json');
-    if (raw && typeof raw === 'object') return raw;
-    return { emojis: [], timeMessages: [] };
+    this.timeConfig = hub.timeConfig;
+    bindHub(this, {
+      events: ['time_config', 'config'],
+      apply: (p) => {
+        p.timeConfig = hub.timeConfig;
+      }
+    });
   }
 
   getRandomItem(array) {
@@ -58,10 +59,10 @@ export class WhitelistManager extends plugin {
     if (!await this.checkMasterPermission(e)) return;
     const groupId = this.extractGroupId(e);
     if (!groupId) return e.reply('请在群聊中使用此命令或指定群号 ' + this.getRandomEmoji());
-    const list = [...xrkconfig.time_groupss];
+    const list = [...hub.time_groupss];
     if (list.includes(groupId)) return e.reply(`群号 ${groupId} 已经在白名单中呢 ${this.getRandomEmoji()}`);
     list.push(groupId);
-    xrkconfig.set('time_groupss', list);
+    hub.set('time_groupss', list);
     await e.reply(`已添加群号 ${groupId} 到整点报时白名单 ${this.getRandomEmoji()}`);
   }
 
@@ -69,20 +70,22 @@ export class WhitelistManager extends plugin {
     if (!await this.checkMasterPermission(e)) return;
     const groupId = this.extractGroupId(e);
     if (!groupId) return e.reply('请在群聊中使用此命令或指定群号 ' + this.getRandomEmoji());
-    const list = [...xrkconfig.time_groupss];
+    const list = [...hub.time_groupss];
     if (!list.includes(groupId)) return e.reply(`群号 ${groupId} 不在白名单中呢 ${this.getRandomEmoji()}`);
-    xrkconfig.set('time_groupss', list.filter(g => g !== groupId));
+    hub.set('time_groupss', list.filter(g => g !== groupId));
     await e.reply(`已从整点报时白名单中删除群号 ${groupId} ${this.getRandomEmoji()}`);
   }
 
   async showGroups(e) {
     if (!await this.checkMasterPermission(e)) return;
-    const groups = xrkconfig.time_groupss;
+    const groups = hub.time_groupss;
     await e.reply(groups.length ? `当前整点报时白名单中的群号有：${groups.join(', ')} ${this.getRandomEmoji()}` : `当前整点报时白名单为空呢~ ${this.getRandomEmoji()}`);
   }
 
   async notifyGroup(groupId, hours) {
-    const message = this.getRandomItem(this.timeConfig.timeMessages || ['{hours}点']).replace('{hours}', hours).replace('{botName}', Bot.nickname);
+    const message = this.getRandomItem(this.timeConfig.timeMessages || ['{hours}点'])
+      .replace('{hours}', hours)
+      .replace('{botName}', Bot.nickname);
     const messages = [`${message} ${this.getRandomEmoji()}`];
     const imgPath = await this.getRandomFile(IMAGE_DIR_PATH, 'jpg|jpeg|png|gif|bmp');
     const group = Bot.pickGroup(groupId);
@@ -92,8 +95,8 @@ export class WhitelistManager extends plugin {
   }
 
   async hourlyNotification() {
-    this.timeConfig = this.loadTimeConfig();
-    const groupList = xrkconfig.time_groupss;
+    this.timeConfig = hub.timeConfig;
+    const groupList = hub.time_groupss;
     if (!groupList?.length) return;
     const currentHour = moment().hour();
     for (const groupId of groupList) {

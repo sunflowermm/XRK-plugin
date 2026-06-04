@@ -18,13 +18,14 @@ XRK-plugin/
 │   │   ├── ip_plugins.json           # 安装插件：IP类
 │   │   ├── js_plugins.json           # 安装插件：JS单文件
 │   │   └── README.md
-├── lib/                      # 插件核心逻辑（配置加载与单例）
+├── lib/
+│   ├── xrk-hub.js            # 统一配置中心（加载 / 监听 / 热更新）
+│   ├── xrk-runtime.js        # bindHub、早报 cron 重排
+│   ├── config-normalize.js   # 各子配置解析与词库匹配
 │   ├── config-paths.js       # 路径与启动复制 ensureAllConfigsSync
-│   ├── plugin-lists.js       # 插件列表路径与读取（data/xrkconfig/*.json）
-│   ├── xrkconfig.js          # 主配置单例（data/xrkconfig/config.yaml）
-│   └── help_system.js        # 帮助配置加载（data/xrkconfig/help_system.yaml）
-├── components/
-│   └── xrkconfig.js          # 兼容入口 → lib/xrkconfig.js
+│   ├── fetch-json.js         # HTTP JSON 请求
+│   └── restart.js            # 安装插件后重启
+├── components/               # 截图等工具（util/takeScreenshot 等）
 ├── commonconfig/             # 框架扫描，Web 控制台编辑（仅一个入口）
 │   ├── xrk.js                # 多文件配置：config、help_system、ai、poke_responses、time_config、screenshot、5个安装插件列表
 │   └── README.md
@@ -43,12 +44,10 @@ XRK-plugin/
 
 - **锅巴**：安装 `guoba-plugin` 后，锅巴左侧会出现「向日葵插件」；主配置写 `config.yaml`，查天气项写 `weather.yaml`（`weather_cfg.*` 字段）。多文件完整编辑仍用 XRK 控制台「向日葵配置」。
 - **查天气**：`#查天气北京`，爬取 [中央气象台](http://www.nmc.cn/) 页面 `id=day7` 七天预报区，不再使用区域截图。
-- **主配置**：`import xrkconfig from './lib/xrkconfig.js'`（或 `./components/xrkconfig.js`），使用 `xrkconfig.get/set`、`xrkconfig.xxx`。
-- **帮助配置**：`import { helpCfg, helpList } from './lib/help_system.js'`。
-- **读其它配置文件**：`import { readConfigSync, getConfigPath } from './lib/config-paths.js'`，例如：`readConfigSync('screenshot')` 读取 `data/xrkconfig/screenshot.yaml`。
-- **读插件列表**：`import { readPluginListSync, getResourcesPluginsDir } from './lib/plugin-lists.js'`，例如：`readPluginListSync('recommended_plugins')` 读取 `data/xrkconfig/recommended_plugins.json`。
+- **配置**：`import hub from './lib/xrk-hub.js'`；读子配置用 `hub.config`、`hub.aiDict`、`hub.helpList`、`hub.getPluginList('recommended_plugins')` 等；写主配置用 `hub.set(key, value)` / `hub.save()`。
+- **热更新**：在插件里 `bindHub(this, { events: ['config', ...], apply })`（见 `lib/xrk-runtime.js`）。
 
 ## 依赖
 
 - 框架：`lib/utils/file-utils.js`、`lib/commonconfig/commonconfig.js`
-- 插件内仅 `lib/` 为实现目录；`components/xrkconfig.js` 为兼容入口（历史 app 仍在引用）。
+- 业务只依赖 `lib/xrk-hub.js`，不再保留 `xrkconfig` / `help_system` 等旧入口。

@@ -17,7 +17,7 @@ import {
   generateTextPluginInfo
 } from './plugintool.js'
 import BotUtil from '../../../lib/util.js'
-import { restart } from '../components/restart.js'
+import { restart } from '../lib/restart.js'
 
 let isInstalling = false;
 

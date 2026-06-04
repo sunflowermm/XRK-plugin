@@ -1,7 +1,7 @@
 import common from '../../../lib/common/common.js'
 import moment from 'moment'
 import _ from 'lodash'
-import xrkcfg from '../components/xrkconfig.js'
+import hub from '../lib/xrk-hub.js'
 
 const groupLikeStatusMap = new Map();
 let isLikeTaskRunning = false;
@@ -297,7 +297,7 @@ export class GroupLike extends plugin {
 
     try {
       for (let [_, bot] of bots) {
-        const whiteList = xrkcfg.thumwhiteList;
+        const whiteList = hub.thumwhiteList;
         const groups = whiteList.length > 0 ? whiteList : Array.from(bot.gl.keys());
 
         for (let groupId of groups) {

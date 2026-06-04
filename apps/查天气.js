@@ -1,13 +1,13 @@
 import plugin from '../../../lib/plugins/plugin.js'
 import BotUtil from '../../../lib/util.js'
-import { readConfigSync } from '../lib/config-paths.js'
+import hub from '../lib/xrk-hub.js'
 import { findCityInfo } from '../lib/weather/city-index.js'
 import { fetchNmcForecast } from '../lib/weather/nmc.js'
 import { formatForecastCard } from '../lib/weather/format.js'
 import { screenshotNmcForecast } from '../lib/weather/snapshot.js'
 
 function getWeatherCfg() {
-  return readConfigSync('weather') || {}
+  return hub.weather
 }
 
 export class weather extends plugin {
