@@ -11,7 +11,7 @@
 
 | 文件 | 管理端 key | 子配置 |
 |------|------------|--------|
-| xrk.js | xrk | config、help_system、ai、poke_responses、time_config、screenshot、recommended_plugins、entertainment_plugins、game_plugins、ip_plugins、js_plugins |
+| xrk.js | xrk | config、help_system、ai、poke_responses、time_config、screenshot、weather、recommended_plugins、entertainment_plugins、game_plugins、ip_plugins、js_plugins |
 
 采用多文件模式（对齐 system.js），点击「向日葵配置」后选择子配置进行编辑。
 
@@ -25,6 +25,7 @@
 | poke_responses | poke_responses.json | 戳一戳文案池 |
 | time_config | time_config.json | 整点报时表情与文案池 |
 | screenshot | screenshot.yaml | 网页截图：URL 过滤策略与截图参数 |
+| weather | weather.yaml | 查天气：nmc.cn 爬取参数（非截图） |
 | recommended_plugins | recommended_plugins.json | 安装插件：推荐插件列表 |
 | entertainment_plugins | entertainment_plugins.json | 安装插件：文娱类插件列表 |
 | game_plugins | game_plugins.json | 安装插件：游戏类插件列表 |
@@ -33,6 +34,7 @@
 
 ## 与运行时关系
 
+- **锅巴** 通过根目录 `guoba.support.js` 编辑主配置常用字段（同一 `config.yaml`）；本目录负责 Web 控制台全量子配置。
 - **config** 与 **lib/xrkconfig.js** 共用 `data/xrkconfig/config.yaml`。
 - **help_system** 与 **lib/help_system.js** 共用 `data/xrkconfig/help_system.yaml`。
 - **ai**、**poke_responses**、**time_config** 由各 app 读取 `data/xrkconfig/*.json`。

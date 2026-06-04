@@ -28,7 +28,8 @@ XRK-plugin/
 ├── commonconfig/             # 框架扫描，Web 控制台编辑（仅一个入口）
 │   ├── xrk.js                # 多文件配置：config、help_system、ai、poke_responses、time_config、screenshot、5个安装插件列表
 │   └── README.md
-├── apps/                     # 业务 app（若存在）
+├── guoba.support.js          # 锅巴面板：export supportGuoba()，由 guoba-plugin 自动扫描加载
+├── apps/                     # 业务指令（index.js 自动加载）
 └── README.md
 ```
 
@@ -40,6 +41,8 @@ XRK-plugin/
 
 ## 使用方式
 
+- **锅巴**：安装 `guoba-plugin` 后，锅巴左侧会出现「向日葵插件」；主配置写 `config.yaml`，查天气项写 `weather.yaml`（`weather_cfg.*` 字段）。多文件完整编辑仍用 XRK 控制台「向日葵配置」。
+- **查天气**：`#查天气北京`，爬取 [中央气象台](http://www.nmc.cn/) 页面 `id=day7` 七天预报区，不再使用区域截图。
 - **主配置**：`import xrkconfig from './lib/xrkconfig.js'`（或 `./components/xrkconfig.js`），使用 `xrkconfig.get/set`、`xrkconfig.xxx`。
 - **帮助配置**：`import { helpCfg, helpList } from './lib/help_system.js'`。
 - **读其它配置文件**：`import { readConfigSync, getConfigPath } from './lib/config-paths.js'`，例如：`readConfigSync('screenshot')` 读取 `data/xrkconfig/screenshot.yaml`。

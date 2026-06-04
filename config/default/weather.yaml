@@ -1,0 +1,45 @@
+# 查天气：打开 nmc.cn 原页，截取完整预报区（实况+7天+小时表+曲线+气候）
+# 路径：data/xrkconfig/weather.yaml（覆盖本文件默认值）
+
+enabled: true
+max_cities: 5
+forecast_days: 7
+request_timeout_ms: 20000
+reply_mode: image
+include_charts: true
+include_climate: true
+user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+screenshot:
+  mode: live
+  # Puppeteer 浏览器视口（不是截图宽度）
+  width: 1500
+  height: 1000
+  deviceScaleFactor: 2
+  waitUntil: networkidle2
+  goto_timeout_ms: 45000
+  imageWaitTimeout: 10000
+  fontWaitTimeout: 4000
+  delayBeforeScreenshot: 3500
+  selectorTimeout: 25000
+  wait_for_hour: true
+  wait_for_charts: true
+  imgType: jpeg
+  quality: 92
+
+  # 截图裁切（自行调试白边/底部）
+  clip:
+    width: 1240          # 输出图片宽度（像素），调小可去右侧白边
+    x: null                # 留空=按 anchor 左缘；填数字则固定左起点
+    anchor: ".weather-header .container"
+    bottom_anchor: "#climateDiv .hb"   # 底部裁到气候图表内容区，避免 footer/二维码
+    selectors:
+      - .weather-header
+      - "#realWarn"
+      - "#realChart"
+      - "#climateDiv"
+    padding:
+      top: 52              # 顶部多留，保证警报完整
+      left: 0
+      right: 0
+      bottom: 0            # 底部不留白，避免截到卡片边框/二维码

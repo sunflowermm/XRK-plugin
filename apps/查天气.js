@@ -1,164 +1,88 @@
-import fs from 'fs'
-import path from 'path'
-const _path = process.cwd()
-import { takeScreenshot } from '../components/util/takeScreenshot.js'
+import plugin from '../../../lib/plugins/plugin.js'
 import BotUtil from '../../../lib/util.js'
+import { readConfigSync } from '../lib/config-paths.js'
+import { findCityInfo } from '../lib/weather/city-index.js'
+import { fetchNmcForecast } from '../lib/weather/nmc.js'
+import { formatForecastCard } from '../lib/weather/format.js'
+import { screenshotNmcForecast } from '../lib/weather/snapshot.js'
 
-function loadCityData () {
-  try {
-    const dataPath = path.join(_path, './plugins/XRK-plugin/resources/weather/weather.json')
-    const rawData = fs.readFileSync(dataPath, 'utf8')
-    return JSON.parse(rawData)
-  } catch (error) {
-    logger.error('[向日葵查天气] 加载城市数据失败:', error)
-    return []
-  }
+function getWeatherCfg() {
+  return readConfigSync('weather') || {}
 }
 
-let cityData = loadCityData();
-
 export class weather extends plugin {
-    constructor() {
-        super({
-            name: '向日葵查天气',
-            dsc: '向日葵查天气',
-            event: 'message',
-            priority: 500,
-            rule: [
-                { reg: "#查天气(.*)$", fnc: 'search_weather' }
-            ]
-        });
+  constructor() {
+    super({
+      name: '向日葵查天气',
+      dsc: '打开中央气象台原页，截取完整预报区并截图',
+      event: 'message',
+      priority: 500,
+      rule: [
+        { reg: /^#查天气(.*)$/i, fnc: 'search_weather' },
+      ],
+    })
+  }
+
+  async search_weather(e) {
+    const cfg = getWeatherCfg()
+    if (cfg.enabled === false) {
+      await e.reply('查天气功能已关闭，可在锅巴或控制台「查天气」配置中开启')
+      return true
     }
 
-    removeSuffix(cityName) {
-        const suffixes = ['乡', '镇', '县', '市', '区'];
-        for (const suffix of suffixes) {
-            if (cityName.endsWith(suffix)) {
-                return cityName.slice(0, -1);
-            }
-        }
-        return cityName;
+    const raw = e.msg.match(/^#查天气(.*)$/i)?.[1]?.trim()
+    if (!raw) {
+      await e.reply('请输入城市名，例如：#查天气北京\n多城市：#查天气北京 上海')
+      return true
     }
 
-    tryWithSuffixes(cityName) {
-        const suffixes = ['市', '县', '区', '镇', '乡'];
-        const results = [];
-        
-        for (const suffix of suffixes) {
-            const cityWithSuffix = cityName + suffix;
-            for (const province of cityData) {
-                const areas = province.Area.split(' ');
-                const enAreas = province.En_Area.split(' ');
-                
-                const index = areas.findIndex(area => area === cityWithSuffix);
-                if (index !== -1) {
-                    results.push({
-                        provinceCode: province.province_code,
-                        enCity: enAreas[index],
-                        matchedName: cityWithSuffix
-                    });
-                }
-            }
-        }
-        return results;
+    const cities = raw.split(/\s+/).filter(Boolean)
+    const maxCities = Math.max(1, Number(cfg.max_cities) || 5)
+    if (cities.length > maxCities) {
+      await e.reply(`一次最多查询 ${maxCities} 个城市`)
+      return true
     }
 
-    findCityInfo(searchCity) {
-        for (const province of cityData) {
-            const areas = province.Area.split(' ');
-            const enAreas = province.En_Area.split(' ');
-            
-            const index = areas.findIndex(area => area === searchCity);
-            if (index !== -1) {
-                return {
-                    provinceCode: province.province_code,
-                    enCity: enAreas[index],
-                    matchedName: searchCity
-                };
-            }
-        }
+    const replyMode = (cfg.reply_mode || 'image').toLowerCase()
+    const messages = []
+    const labels = []
+    const failed = []
 
-        const cityWithoutSuffix = this.removeSuffix(searchCity);
-        if (cityWithoutSuffix !== searchCity) {
-            for (const province of cityData) {
-                const areas = province.Area.split(' ');
-                const enAreas = province.En_Area.split(' ');
-                
-                const index = areas.findIndex(area => area === cityWithoutSuffix);
-                if (index !== -1) {
-                    return {
-                        provinceCode: province.province_code,
-                        enCity: enAreas[index],
-                        matchedName: cityWithoutSuffix
-                    };
-                }
-            }
+    for (const name of cities) {
+      const cityInfo = findCityInfo(name)
+      if (!cityInfo) {
+        failed.push(name)
+        continue
+      }
+      try {
+        if (replyMode === 'text') {
+          const data = await fetchNmcForecast(cityInfo, {
+            timeout: cfg.request_timeout_ms,
+            userAgent: cfg.user_agent,
+            maxDays: cfg.forecast_days,
+          })
+          messages.push(formatForecastCard(data, name))
+        } else {
+          const { image, cityName, published } = await screenshotNmcForecast(cityInfo, cfg)
+          const title = `${name || cityName} 天气`
+          const sub = published ? `发布时间：${published}` : ''
+          messages.push([title, sub].filter(Boolean).join('\n'))
+          messages.push(segment.image(image))
         }
-        const suffixResults = this.tryWithSuffixes(cityWithoutSuffix);
-        return suffixResults.length > 0 ? suffixResults[0] : null;
+        labels.push(name)
+      } catch (err) {
+        logger.error(`[向日葵查天气] ${name}:`, err)
+        failed.push(name)
+      }
     }
-    async search_weather(e) {
-        const match = e.msg.match(/#查天气(.*)$/);
-        if (!match || !match[1]) {
-            await this.reply('请输入正确的城市名，例如:#查天气北京 上海 广州');
-            return;
-        }
 
-        const cities = match[1].trim().split(/\s+/);
-        if (cities.length === 0) {
-            await this.reply('请输入正确的城市名，例如:#查天气北京 上海 广州');
-            return;
-        }
-
-        const messages = [];
-        const xrk = [];
-        const errorCities = [];
-
-        for (const city of cities) {
-            const cityInfo = this.findCityInfo(city);
-            if (!cityInfo) {
-                errorCities.push(city);
-                continue;
-            }
-
-            try {
-                const weatherUrl = `http://www.nmc.cn/publish/forecast/${cityInfo.provinceCode}/${cityInfo.enCity}.html`;
-                // 裁剪比例 0–1，可改：顶部裁 8%、底部裁 25%
-                const screenshotConfig = {
-                    width: 1280,
-                    height: 2400,
-                    quality: 90,
-                    imgType: 'jpeg',
-                    waitUntil: 'networkidle2',
-                    fullPage: true,
-                    delayBeforeScreenshot: 2000,
-                    cropTopPercent: 0.06,
-                    cropBottomPercent: 0.23
-                };
-
-                const imageResult = await takeScreenshot(weatherUrl, `weather_${cityInfo.enCity}`, screenshotConfig);
-                if (!imageResult) throw new Error('截图失败');
-
-                let cityMsg = [];
-                cityMsg.push(`${city}的天气信息`);
-                xrk.push(`${city}`)
-                messages.push(cityMsg);
-                messages.push(segment.image(imageResult));
-            } catch (error) {
-                logger.error(`[向日葵查天气] 获取${city}天气信息失败:`, error);
-                errorCities.push(city);
-            }
-        }
-        if (messages.length === 0 && errorCities.length > 0) {
-            await this.reply(`无法获取任何城市的天气信息，请检查城市名称是否正确。\n${errorCities.join('、')}`);
-            return;
-        }
-        if (messages.length > 0) {
-            await BotUtil.makeChatRecord(e, messages, '向日葵查天气', xrk);
-        }
-
-        if (errorCities.length > 0) {
-            await this.reply(`以下城市的天气信息获取失败，请检查城市名称是否正确：\n${errorCities.join('、')}`);
-        }
+    if (messages.length === 0) {
+      await e.reply(failed.length ? `未能获取天气：${failed.join('、')}` : '未查询到任何城市')
+      return true
     }
+
+    await BotUtil.makeChatRecord(e, messages, '向日葵查天气', labels)
+    if (failed.length) await e.reply(`以下城市失败：${failed.join('、')}`)
+    return true
+  }
 }

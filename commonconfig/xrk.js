@@ -1,6 +1,6 @@
 /**
  * 向日葵插件配置（多文件，对齐 system.js）
- * 子配置：config、help_system、ai、poke_responses、time_config、screenshot、安装插件列表(5)
+ * 子配置：config、help_system、ai、poke_responses、time_config、screenshot、weather、安装插件列表(5)
  * 读写 data/xrkconfig/*，与 lib/xrkconfig.js、lib/help_system.js 共用
  */
 import path from 'path';
@@ -464,6 +464,59 @@ export default class XrkConfig extends ConfigBase {
                   required: true
                 }
               }
+            }
+          }
+        }
+      },
+
+      weather: {
+        name: 'weather',
+        displayName: '查天气',
+        description: '中央气象台 nmc.cn 7 天预报爬取（apps/查天气.js），非网页截图',
+        filePath: getXrkPath('weather'),
+        fileType: 'yaml',
+        schema: {
+          fields: {
+            enabled: { type: 'boolean', label: '启用查天气', default: true, component: 'Switch' },
+            max_cities: {
+              type: 'number',
+              label: '单次最多城市数',
+              description: '#查天气 一次指令最多查询几个城市',
+              min: 1,
+              max: 10,
+              default: 5,
+              component: 'InputNumber'
+            },
+            forecast_days: {
+              type: 'number',
+              label: '预报天数',
+              description: '从页面 7 天预报区截取的天数（1-7）',
+              min: 1,
+              max: 7,
+              default: 7,
+              component: 'InputNumber'
+            },
+            request_timeout_ms: {
+              type: 'number',
+              label: '请求超时(ms)',
+              min: 3000,
+              default: 15000,
+              component: 'InputNumber'
+            },
+            reply_mode: {
+              type: 'string',
+              label: '回复形式',
+              description: '当前仅实现 text 文本卡片',
+              enum: ['text'],
+              default: 'text',
+              component: 'Select'
+            },
+            user_agent: {
+              type: 'string',
+              label: 'User-Agent',
+              description: '访问 nmc.cn 时使用的浏览器标识',
+              default: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              component: 'Input'
             }
           }
         }
