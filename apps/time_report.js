@@ -3,7 +3,6 @@ import moment from 'moment';
 import fs from 'fs';
 import path from 'path';
 import hub from '../lib/xrk-hub.js';
-import { bindHub } from '../lib/xrk-runtime.js';
 
 const ROOT_PATH = process.cwd();
 const PLUGIN_PATH = path.join(ROOT_PATH, 'plugins/XRK-plugin');
@@ -24,12 +23,6 @@ export class WhitelistManager extends plugin {
     });
     this.task = { name: '整点报时任务', cron: '0 0 * * * *', fnc: () => this.hourlyNotification() };
     this.timeConfig = hub.timeConfig;
-    bindHub(this, {
-      events: ['time_config', 'config'],
-      apply: (p) => {
-        p.timeConfig = hub.timeConfig;
-      }
-    });
   }
 
   getRandomItem(array) {

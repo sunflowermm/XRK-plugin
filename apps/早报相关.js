@@ -5,6 +5,26 @@ import plugin from '../../../lib/plugins/plugin.js';
 import hub from '../lib/xrk-hub.js';
 import { bindHub, rescheduleTask } from '../lib/xrk-runtime.js';
 
+async function scheduledMorningPush() {
+  const API_URL = 'https://api.03c3.cn/api/zb';
+  const delay = hub.news?.delay ?? 1000;
+  const list = hub.news_groupss || [];
+  try {
+    const message = ['早安！这是今天的早报\n', segment.image(API_URL)];
+    for (const groupId of list) {
+      const group = Bot.pickGroup(groupId);
+      if (group) {
+        await group.sendMsg(message);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        logger.error(`[早报] 群组 ${groupId} 不存在`);
+      }
+    }
+  } catch (error) {
+    logger.error('[早报] 获取早报图片失败:', error);
+  }
+}
+
 export class SettingsPlugin extends plugin {
   constructor() {
     super({
@@ -22,42 +42,18 @@ export class SettingsPlugin extends plugin {
     this.task = {
       name: '每日早报推送',
       cron: `0 0 ${hub.news_pushtime ?? 8} * * ?`,
-      fnc: () => this.scheduledPush()
+      fnc: scheduledMorningPush
     };
     bindHub(this, {
       events: ['config'],
       apply: () => {
-        rescheduleTask(this, {
+        rescheduleTask({
           name: '每日早报推送',
           cron: () => `0 0 ${hub.news_pushtime ?? 8} * * ?`,
-          fnc: this.scheduledPush
+          fnc: scheduledMorningPush
         });
       }
     });
-  }
-
-  async scheduledPush() {
-    const API_URL = 'https://api.03c3.cn/api/zb';
-    const delay = hub.news?.delay ?? 1000;
-    const list = hub.news_groupss || [];
-    try {
-      const message = ['早安！这是今天的早报\n', segment.image(API_URL)];
-      for (const groupId of list) {
-        const group = Bot.pickGroup(groupId);
-        if (group) {
-          await group.sendMsg(message);
-          await this.sleep(delay);
-        } else {
-          logger.error(`[早报] 群组 ${groupId} 不存在`);
-        }
-      }
-    } catch (error) {
-      logger.error('[早报] 获取早报图片失败:', error);
-    }
-  }
-
-  sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async setPushTime(e) {

@@ -2,7 +2,6 @@ import { takeScreenshot } from '../components/util/takeScreenshot.js';
 import path from 'path';
 import fs from 'fs';
 import hub from '../lib/xrk-hub.js';
-import { bindHub } from '../lib/xrk-runtime.js';
 
 const cwd = process.cwd();
 const root = path.join(cwd, 'plugins/XRK-plugin');
@@ -69,12 +68,6 @@ export class showmainHelp extends plugin {
       event: 'message',
       priority: hub.help_priority,
       rule: [{ reg: '^#?(xrk|向日葵)?(插件)?(帮助|help|Help|菜单|功能)', fnc: 'generateHelpScreenshot' }],
-    });
-    bindHub(this, {
-      events: ['config', 'help_system'],
-      apply: (p) => {
-        p.priority = hub.help_priority;
-      }
     });
   }
 

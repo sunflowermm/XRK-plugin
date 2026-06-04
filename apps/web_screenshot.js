@@ -1,6 +1,5 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import hub from '../lib/xrk-hub.js';
-import { bindHub } from '../lib/xrk-runtime.js';
 import { URL_RULE_PATTERN } from '../lib/url-detect.js';
 import { WebScreenshotUrlService, renderUrlScreenshot } from '../lib/web-screenshot.js';
 
@@ -20,10 +19,6 @@ export class WebpageScreenshot extends plugin {
       ]
     });
     this.applyScreenshotConfig();
-    bindHub(this, {
-      events: ['config', 'screenshot'],
-      apply: () => this.applyScreenshotConfig()
-    });
   }
 
   applyScreenshotConfig() {
@@ -49,15 +44,9 @@ export class WebpageScreenshot extends plugin {
         return false;
       }
 
-      const validUrls = await this._urlService.filterReachableUrls(urls);
-      if (validUrls.length === 0) {
-        logger.debug(`[网页截图] URL 预检均未通过: ${urls.join(', ')}`);
-        return false;
-      }
-
       const max = this._runtime.urlRules.urlProcessing?.maxUrlsPerMessage ?? 5;
       const screenshotSegments = [];
-      for (const url of validUrls.slice(0, max)) {
+      for (const url of urls.slice(0, max)) {
         const buf = await renderUrlScreenshot(
           url,
           `screenshot_${Date.now()}`,

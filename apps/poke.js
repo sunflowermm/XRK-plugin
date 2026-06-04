@@ -1,7 +1,6 @@
 import plugin from '../../../lib/plugins/plugin.js'
 import common from '../../../lib/common/common.js'
 import hub from '../lib/xrk-hub.js'
-import { bindHub } from '../lib/xrk-runtime.js'
 import fs from 'fs'
 import path from 'path'
 import fetch from 'node-fetch'
@@ -133,12 +132,6 @@ export class UniversalPoke extends plugin {
     })
     registerPokeEngine(this)
     this.init()
-    bindHub(this, {
-      events: ['config', 'poke_responses'],
-      apply: (p) => {
-        p.priority = hub.poke?.priority ?? hub.poke_priority ?? -5000
-      }
-    })
   }
 
   /** 初始化模块系统 */
@@ -1004,12 +997,6 @@ export class MasterPokeProtection extends plugin {
       event: 'notice.group.poke',
       priority: xrkcfg.corepoke_priority ?? -5000,
       rule: [{ fnc: 'handlePoke', log: false }]
-    })
-    bindHub(this, {
-      events: ['config'],
-      apply: (p) => {
-        p.priority = hub.corepoke_priority ?? -5000
-      }
     })
   }
 
