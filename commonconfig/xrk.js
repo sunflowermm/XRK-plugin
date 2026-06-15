@@ -10,7 +10,9 @@ import hub from '../lib/xrk-hub.js';
 // 使用相对路径，交由 ConfigBase 基类基于项目根目录进行拼接，
 // 避免出现「cwd + 绝对路径」导致的路径重复问题。
 const XRK_CONFIG_DIR = path.join('data', 'xrkconfig');
+const XRK_DEFAULT_DIR = path.join('plugins', 'XRK-plugin', 'config', 'default');
 const getXrkPath = (name, ext = 'yaml') => () => path.join(XRK_CONFIG_DIR, `${name}.${ext}`);
+const getXrkDefaultPath = (name, ext = 'json') => () => path.join(XRK_DEFAULT_DIR, `${name}.${ext}`);
 
 const PLUGIN_LIST_NAMES = ['recommended_plugins', 'entertainment_plugins', 'game_plugins', 'ip_plugins', 'js_plugins'];
 
@@ -616,6 +618,7 @@ export default class XrkConfig extends ConfigBase {
         displayName: '推荐插件',
         description: '安装插件：推荐插件列表，可增删改每条插件信息',
         filePath: getXrkPath('recommended_plugins', 'json'),
+        defaultFilePath: getXrkDefaultPath('recommended_plugins', 'json'),
         fileType: 'json',
         schema: {
           fields: {
@@ -641,6 +644,7 @@ export default class XrkConfig extends ConfigBase {
         displayName: '文娱插件',
         description: '安装插件：文娱类插件列表',
         filePath: getXrkPath('entertainment_plugins', 'json'),
+        defaultFilePath: getXrkDefaultPath('entertainment_plugins', 'json'),
         fileType: 'json',
         schema: {
           fields: {
@@ -666,6 +670,7 @@ export default class XrkConfig extends ConfigBase {
         displayName: '游戏插件',
         description: '安装插件：游戏类插件列表',
         filePath: getXrkPath('game_plugins', 'json'),
+        defaultFilePath: getXrkDefaultPath('game_plugins', 'json'),
         fileType: 'json',
         schema: {
           fields: {
@@ -691,6 +696,7 @@ export default class XrkConfig extends ConfigBase {
         displayName: 'IP类插件',
         description: '安装插件：IP相关插件列表',
         filePath: getXrkPath('ip_plugins', 'json'),
+        defaultFilePath: getXrkDefaultPath('ip_plugins', 'json'),
         fileType: 'json',
         schema: {
           fields: {
@@ -716,6 +722,7 @@ export default class XrkConfig extends ConfigBase {
         displayName: 'JS插件',
         description: '安装插件：单文件JS插件列表（git 指向 .js 直链）',
         filePath: getXrkPath('js_plugins', 'json'),
+        defaultFilePath: getXrkDefaultPath('js_plugins', 'json'),
         fileType: 'json',
         schema: {
           fields: {
@@ -766,14 +773,16 @@ export default class XrkConfig extends ConfigBase {
     }
     if (PLUGIN_LIST_NAMES.includes(name)) {
       const raw = await this._invoke(name, 'read');
-      const arr = Array.isArray(raw) ? raw : [];
-      return { list: arr.map(item => ({
-        name: item?.name ?? '',
-        cn_name: item?.cn_name ?? '',
-        anothername: item?.anothername ?? '',
-        description: item?.description ?? '',
-        git: item?.git ?? ''
-      })) };
+      const arr = Array.isArray(raw?.list) ? raw.list : [];
+      return {
+        list: arr.map(item => ({
+          name: item?.name ?? '',
+          cn_name: item?.cn_name ?? '',
+          anothername: item?.anothername ?? '',
+          description: item?.description ?? '',
+          git: item?.git ?? ''
+        }))
+      };
     }
     return this._invoke(name, 'read');
   }
