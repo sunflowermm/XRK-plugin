@@ -199,10 +199,6 @@ export class UniversalPoke extends plugin {
       voice: {
         enabled: modules.voice ?? true,
         execute: this.sendVoice.bind(this)
-      },
-      master: {
-        enabled: modules.master ?? true,
-        execute: this.masterProtection.bind(this)
       }
     }
 
@@ -256,13 +252,6 @@ export class UniversalPoke extends plugin {
       logger.error('[戳一戳] 处理失败:', err)
       return false
     }
-  }
-
-  /** 主人保护模块 */
-  async masterProtection(e, userState, identities) {
-    // 这个模块在executeModules中不会被调用，因为主人保护在handleMasterPoke中处理
-    // 但保留这个函数以保持模块结构完整性
-    return false
   }
 
   /** 处理戳主人 */

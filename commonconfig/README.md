@@ -38,4 +38,4 @@
 - 所有子配置写入后由 **lib/xrk-hub.js** 统一 `reload`，与控制台、锅巴、指令侧热更新一致。
 - **ai**、**poke_responses**、**time_config** 由各 app 读取 `data/xrkconfig/*.json`。
 - **screenshot** 由 `apps/web_screenshot.js` 读取 `data/xrkconfig/screenshot.yaml`。
-- **插件列表** 由 `lib/plugin-lists.js` 提供路径与读取接口，模板在 `config/default/`。
+- **插件列表** 由 `lib/config-registry.js` 与 `lib/xrk-hub.js` 统一管理，模板在 `config/default/`。

@@ -55,19 +55,6 @@ function tags(field, label, help = '') {
   }
 }
 
-function multiSelect(field, label, options, help = '') {
-  return {
-    field,
-    label,
-    ...(help ? { bottomHelpMessage: help } : {}),
-    component: 'Select',
-    componentProps: {
-      mode: 'multiple',
-      options: options.map(o => (typeof o === 'string' ? { label: o, value: o } : o)),
-    },
-  }
-}
-
 function slider(field, label, opts = {}) {
   return {
     field,
@@ -154,7 +141,6 @@ const pokeModuleSchemas = [
   sw('pokeback', '戳回去'),
   sw('image', '图片'),
   sw('voice', '语音'),
-  sw('master', '主人专属'),
 ]
 
 const pokeCooldownSchemas = [

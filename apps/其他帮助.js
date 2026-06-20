@@ -1,6 +1,6 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import hub from '../lib/xrk-hub.js';
-import { takeScreenshot } from '../components/util/takeScreenshot.js';
+import { takeScreenshot } from '../lib/web-screenshot.js';
 import { captureHelpScreenshot } from '../lib/help-render.js';
 import { SUB_HELP_PAGES } from '../lib/sub-help-pages.js';
 

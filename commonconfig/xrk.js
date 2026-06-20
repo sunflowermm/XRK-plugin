@@ -160,8 +160,7 @@ export default class XrkConfig extends ConfigBase {
                     punishment: { type: 'boolean', label: '惩罚', default: true, component: 'Switch' },
                     pokeback: { type: 'boolean', label: '戳回去', default: true, component: 'Switch' },
                     image: { type: 'boolean', label: '图片回复', default: true, component: 'Switch' },
-                    voice: { type: 'boolean', label: '语音回复', default: true, component: 'Switch' },
-                    master: { type: 'boolean', label: '主人专属', default: true, component: 'Switch' }
+                    voice: { type: 'boolean', label: '语音回复', default: true, component: 'Switch' }
                   }
                 },
                 cooldowns: {

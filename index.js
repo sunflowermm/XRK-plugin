@@ -132,6 +132,5 @@ for (let i in files) {
 logger.info(chalk.green(`✅ 成功加载 ${Object.keys(apps).length} 个插件`));
 logger.info(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
 
-// ========== 导出配置和应用 ==========
+// ========== 导出应用 ==========
 export { apps };
-export const config = hub.config;
