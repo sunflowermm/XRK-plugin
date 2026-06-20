@@ -4,7 +4,7 @@
 help_priority: 500          # 帮助优先级（数值越大优先级越高）
 sharing: true               # 是否开启向日葵资源相关功能展示
 screen_shot_http: false     # 是否开启网页截图总开关
-peopleai: false             # 是否开启人工 AI 词库回复
+peopleai: false             # 是否开启词库 AI 回复
 screen_shot_quality: 1.5    # 网页截图渲染精度（deviceScaleFactor，1-3）
 news_pushtime: 8            # 早报推送时间（小时，0-23）
 news:                       # 早报扩展（可选）

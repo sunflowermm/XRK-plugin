@@ -45,7 +45,7 @@ export class XrkSettings extends plugin {
 
     messages.push('【基础设置】');
     messages.push([
-      `❯ 向日葵人工AI状态: ${c.peopleai ? '✅已开启' : '❌已关闭'}\n└─ 发送\n【开启/关闭向日葵ai】\n来更改设置`,
+      `❯ 词库 AI: ${c.peopleai ? '✅已开启' : '❌已关闭'}\n└─ 发送\n【#开启/关闭向日葵ai】\n来更改设置`,
       `❯ 帮助优先级: ${c.help_priority}\n└─ 发送\n【#向日葵修改帮助优先级xxx】\n来更改(支持正负整数)`,
       `❯ 渲染精度: ${c.screen_shot_quality}\n└─ 发送\n【#向日葵修改渲染精度x.xx】\n来更改(1-3之间，支持两位小数)`,
       `❯ 网页截图: ${c.screen_shot_http ? '✅已开启' : '❌已关闭'}\n└─ 发送\n【#向日葵开启/关闭网页截图】\n来更改设置`,
