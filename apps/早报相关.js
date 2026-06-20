@@ -4,8 +4,28 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import hub from '../lib/xrk-hub.js';
 
-/** 早报图片 API（03c3  zb 接口，直接返回 PNG） */
-const MORNING_NEWS_IMAGE = 'https://api.03c3.cn/api/zb';
+/** 60s 社区 API（vikiboss/60s），image-proxy 直出 PNG */
+const MORNING_NEWS_API = 'https://60s.viki.moe/v2/60s';
+
+async function resolveMorningNewsImage() {
+  try {
+    const res = await fetch(`${MORNING_NEWS_API}?encoding=image-proxy`, {
+      signal: AbortSignal.timeout(15000)
+    });
+    if (res.ok && res.headers.get('content-type')?.includes('image')) {
+      return `${MORNING_NEWS_API}?encoding=image-proxy`;
+    }
+  } catch (err) {
+    logger.warn(`[早报] image-proxy 不可用: ${err.message}`);
+  }
+  const res = await fetch(`${MORNING_NEWS_API}?encoding=json`, {
+    signal: AbortSignal.timeout(15000)
+  });
+  const json = await res.json();
+  const url = json?.data?.image;
+  if (url) return url;
+  throw new Error(json?.message || '早报接口未返回图片');
+}
 
 function morningNewsCron() {
   return `0 0 ${hub.news_pushtime} * * ?`;
@@ -14,10 +34,24 @@ function morningNewsCron() {
 async function pushMorningNews() {
   const groups = hub.news_groupss;
   if (!groups.length) return;
+
+  let imageUrl;
+  try {
+    imageUrl = await resolveMorningNewsImage();
+  } catch (err) {
+    logger.error('[早报] 获取图片失败:', err);
+    return;
+  }
+
   const delay = hub.news_push_delay;
   for (const groupId of groups) {
     try {
-      await Bot.pickGroup(groupId)?.sendMsg(['早安！这是今天的早报\n', segment.image(MORNING_NEWS_IMAGE)]);
+      const group = Bot.pickGroup(groupId);
+      if (!group) {
+        logger.error(`[早报] 群 ${groupId} 不存在`);
+        continue;
+      }
+      await group.sendMsg(['早安！这是今天的早报\n', segment.image(imageUrl)]);
       if (delay > 0) await new Promise(r => setTimeout(r, delay));
     } catch (err) {
       logger.error(`[早报] 群 ${groupId} 推送失败:`, err);
