@@ -41,15 +41,7 @@ export default class XrkConfig extends ConfigBase {
             peopleai: { type: 'boolean', label: '词库 AI', default: false, component: 'Switch' },
             screen_shot_quality: { type: 'number', label: '网页截图渲染精度', default: 1.5, min: 1, max: 3, component: 'InputNumber' },
             news_pushtime: { type: 'number', label: '早报推送时间（点）', default: 8, min: 0, max: 23, component: 'InputNumber' },
-            news: {
-              type: 'object',
-              label: '早报扩展',
-              description: '早报推送群间间隔等（apps/早报相关.js）',
-              component: 'SubForm',
-              fields: {
-                delay: { type: 'number', label: '群间推送间隔（毫秒）', min: 0, default: 1000, component: 'InputNumber' }
-              }
-            },
+            news_push_delay: { type: 'number', label: '早报群间推送间隔（毫秒）', default: 1000, min: 0, component: 'InputNumber' },
             coremaster: { type: 'number', label: '核心主人QQ', default: 0, min: 0, component: 'InputNumber' },
             emoji_filename: { type: 'string', label: '全局表情目录名', default: '孤独摇滚', component: 'Input' },
             time_groupss: { type: 'array', label: '整点报时群号', itemType: 'string', default: [], component: 'Tags' },

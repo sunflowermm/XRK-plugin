@@ -56,7 +56,8 @@ export class XrkSettings extends plugin {
     messages.push([
       `❯ 整点报时推送群:\n${(c.time_groupss?.length > 0 ? c.time_groupss.map(g => `└─ ${g}`).join('\n') : '└─ 暂无白名单群')}\n发送\n【整点报时添加/删除白名单】\n来更改设置`,
       `❯ 早报推送群:\n${(c.news_groupss?.length > 0 ? c.news_groupss.map(g => `└─ ${g}`).join('\n') : '└─ 暂无白名单群')}\n发送\n【#早报添加白名单】或【#早报删除白名单】\n来更改设置`,
-      `❯ 早报推送时间: ${c.news_pushtime}点\n└─ 发送\n【#修改早报推送时间8】\n来更改(0-23)`
+      `❯ 早报推送时间: ${c.news_pushtime}点\n└─ 发送\n【#修改早报推送时间8】\n来更改(0-23)`,
+      `❯ 手动获取早报: 发送\n【#早报】或【#今日早报】`
     ].join('\n'));
 
     messages.push('【权限设置】');

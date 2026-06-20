@@ -238,7 +238,7 @@ export const configSchemas = [
   sw('peopleai', '词库 AI', '需 ai.json / 下方词条'),
   num('screen_shot_quality', '截图渲染精度', { min: 1, max: 3, step: 0.1 }),
   radio('news_pushtime', '早报推送时间(点)', Array.from({ length: 24 }, (_, i) => ({ label: `${i} 点`, value: i }))),
-  objForm('news', '早报扩展', [num('delay', '群间间隔(ms)', { min: 0 })]),
+  num('news_push_delay', '早报群间间隔(ms)', { min: 0 }),
   selectFriend('coremaster', '核心主人 QQ', '从好友列表选择；0 表示未设置'),
   inp('emoji_filename', '全局表情目录名'),
   selectGroup('time_groupss', '整点报时群'),
