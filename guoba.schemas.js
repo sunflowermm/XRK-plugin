@@ -319,7 +319,6 @@ export const helpSystemSchemas = [
     inp('descColor', '描述颜色'),
     inp('footerColor', '页脚颜色'),
     inp('contBgColor', '面板背景色'),
-    num('contBgBlur', '面板模糊', { min: 0 }),
     inp('groupBgColor', '分组背景'),
     inp('rowBgColor1', '奇数行背景'),
     inp('rowBgColor2', '偶数行背景'),

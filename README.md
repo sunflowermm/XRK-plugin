@@ -2,7 +2,7 @@
 
 ## 帮助图预览
 
-主帮助与子帮助共用 `resources/help/help_template.*`：**双列**布局、汉仪文黑字体、高透明毛玻璃面板；背景图每次从 `bgother/` 随机抽取（3× 设备像素比 PNG）。
+主帮助与子帮助共用 `resources/help/help_template.*`：**双列**布局、汉仪文黑字体、半透明面板（无 backdrop 模糊）；背景图每次从 `bgother/` 随机抽取（3× 设备像素比 PNG）。
 
 ### 主帮助 `#向日葵帮助`
 

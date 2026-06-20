@@ -7,8 +7,7 @@ screen_shot_http: false     # 是否开启网页截图总开关
 peopleai: false             # 是否开启词库 AI 回复
 screen_shot_quality: 1.5    # 网页截图渲染精度（deviceScaleFactor，1-3）
 news_pushtime: 8            # 早报推送时间（小时，0-23）
-news:                       # 早报扩展（可选）
-  delay: 1000               # 群间推送间隔（毫秒）
+news_push_delay: 1000       # 早报群间推送间隔（毫秒）
 coremaster: 0               # 核心主人 QQ（用于权限判断等）
 emoji_filename: 孤独摇滚   # 全局表情目录名（resources/emoji 下子目录）
 time_groupss: []            # 整点报时推送群号列表

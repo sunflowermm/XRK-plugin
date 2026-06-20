@@ -180,7 +180,6 @@ export default class XrkConfig extends ConfigBase {
                 descColor: { type: 'string', label: '描述颜色', default: '#475569', component: 'Input' },
                 footerColor: { type: 'string', label: '页脚颜色', default: 'rgba(248,250,252,0.72)', component: 'Input' },
                 contBgColor: { type: 'string', label: '面板背景色', default: 'rgba(255, 255, 255, 0.08)', component: 'Input' },
-                contBgBlur: { type: 'number', label: '面板模糊', default: 6, component: 'InputNumber' },
                 groupBgColor: { type: 'string', label: '分组背景', default: 'linear-gradient(90deg, rgba(94, 234, 212, 0.04), rgba(255, 255, 255, 0.03))', component: 'Input' },
                 rowBgColor1: { type: 'string', label: '奇数行背景', default: 'rgba(255, 255, 255, 0.01)', component: 'Input' },
                 rowBgColor2: { type: 'string', label: '偶数行背景', default: 'rgba(255, 255, 255, 0.03)', component: 'Input' }
