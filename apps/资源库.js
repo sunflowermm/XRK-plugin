@@ -1,6 +1,7 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import hub from '../lib/xrk-hub.js';
 import { fetchJson } from '../lib/fetch-json.js';
+import { resolveImageBuffer } from '../lib/fetch-media.js';
 
 const MMP = 'https://api.mmp.cc/api';
 const XXAPI = 'https://v2.xxapi.cn/api';
@@ -15,12 +16,16 @@ const VIDEO = {
   luoli: `${MMP}/ksvideo?type=json&id=LuoLi`
 };
 
-/** 已实测可用的图片源（按优先级尝试） */
+const pickXxapi = (d) => (d?.code === 200 && d.data ? d.data : null);
+const pickPaiii = (d) => d?.url || null;
+const pickJsms = (d) => (d?.success && d.url ? d.url : null);
+
+/** 已实测可用的图片源（按优先级；dmoe 常返回百度跳转，已移除） */
 const IMAGE = {
   random: [
-    async () => pickDmoe(await fetchJson('https://www.dmoe.cc/random.php?return=json')),
     async () => pickPaiii(await fetchJson('https://t.paiii.cn/api/random?format=json')),
-    async () => pickJsms(await fetchJson('https://cloud.jsms2.cn/api/image/image.php?mode=json&type=random'))
+    async () => pickJsms(await fetchJson('https://cloud.jsms2.cn/api/image/image.php?mode=json&type=random')),
+    async () => pickXxapi(await fetchJson(`${XXAPI}/wallpaper?return=json`))
   ],
   touhou: ['https://img.paulzzh.com/touhou/random'],
   anime: [
@@ -36,37 +41,11 @@ const IMAGE = {
     async () => pickXxapi(await fetchJson(`${XXAPI}/meinvpic?return=json`)),
     `${MMP}/kswallpaper?category=meizi&type=jpg`
   ],
-  wallpaper: [
-    async () => pickXxapi(await fetchJson(`${XXAPI}/wallpaper?return=json`))
-  ],
+  wallpaper: [async () => pickXxapi(await fetchJson(`${XXAPI}/wallpaper?return=json`))],
   heisiPic: [async () => pickXxapi(await fetchJson(`${XXAPI}/heisi?return=json`))],
   baisiPic: [async () => pickXxapi(await fetchJson(`${XXAPI}/baisi?return=json`))],
   jkPic: [async () => pickXxapi(await fetchJson(`${XXAPI}/jk?return=json`))]
 };
-
-function pickXxapi(data) {
-  return data?.code === 200 && data.data ? data.data : null;
-}
-
-function pickDmoe(data) {
-  return data?.code == 200 && data.imgurl ? data.imgurl : null;
-}
-
-function pickPaiii(data) {
-  return data?.url || null;
-}
-
-function pickJsms(data) {
-  return data?.success && data.url ? data.url : null;
-}
-
-async function resolveImage(sources) {
-  for (const src of sources) {
-    const url = typeof src === 'function' ? await src() : src;
-    if (url) return url;
-  }
-  return null;
-}
 
 export class AvatarPlugin extends plugin {
   constructor() {
@@ -96,23 +75,19 @@ export class AvatarPlugin extends plugin {
     });
   }
 
-  checkSharing() {
-    return hub.config.sharing;
-  }
-
   async sendImgFromSources(sources) {
-    if (!this.checkSharing()) return false;
-    const url = await resolveImage(sources);
-    if (!url) {
+    if (!hub.config.sharing) return false;
+    const buf = await resolveImageBuffer(sources);
+    if (!buf) {
       await this.e.reply('资源获取失败，接口可能暂时不可用，请稍后再试');
       return false;
     }
-    await this.e.reply(['芝士你要的图片', segment.image(url)]);
+    await this.e.reply(['芝士你要的图片', segment.image(buf)]);
     return true;
   }
 
   async sendVideo(url) {
-    if (!this.checkSharing()) return false;
+    if (!hub.config.sharing) return false;
     const data = await fetchJson(url);
     if (data.status !== 'success' || !data.link) {
       await this.e.reply('视频获取失败，接口可能暂时不可用，请稍后再试');
