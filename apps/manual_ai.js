@@ -35,7 +35,7 @@ export class ExamplePlugin extends plugin {
   }
 
   async aiHandler(e) {
-    if (!hub.peopleai) return false;
+    if (!hub.config.peopleai) return false;
     if (hasImages(e)) return false;
 
     const dict = hub.aiDict;

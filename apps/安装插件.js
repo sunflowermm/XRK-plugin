@@ -2,7 +2,6 @@ import fs from 'fs'
 import path from 'path'
 import {
   pluginData,
-  PLUGIN_CATEGORIES,
   getCategoryByInput,
   ensureCategoryImageSegments,
   getCategoryPlugins,
@@ -16,6 +15,7 @@ import {
   execCommand,
   generateTextPluginInfo
 } from '../lib/plugintool.js'
+import { PLUGIN_CATEGORIES } from '../lib/config-registry.js'
 import BotUtil from '../../../lib/util.js'
 import { restart } from '../lib/restart.js'
 

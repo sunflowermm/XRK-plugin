@@ -1,6 +1,34 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import hub from '../lib/xrk-hub.js';
 import BotUtil from '../../../lib/util.js';
+import cfg from '../../../lib/config/config.js';
+
+async function denyUnlessMaster(e) {
+  if (e.isMaster) return true;
+  await e.reply('❌ 您没有权限执行此操作');
+  return false;
+}
+
+async function setIntegerConfig(e, pattern, key, label) {
+  if (!await denyUnlessMaster(e)) return;
+  const n = parseInt(e.msg.replace(pattern, '').trim(), 10);
+  if (Number.isNaN(n) || n % 1 !== 0) return e.reply('❌ 请输入有效的整数数值');
+  hub.set(key, n);
+  return e.reply(`✅ ${label}已修改为: ${n}`);
+}
+
+async function toggleConfig(e, key, label, getCurrent) {
+  if (!await denyUnlessMaster(e)) return;
+  const on = e.msg.includes('开启');
+  if (getCurrent() === on) return e.reply(`${label}已${on ? '开启' : '关闭'}, 无需重复操作`);
+  hub.set(key, on);
+  return e.reply(`✅ ${label}已${on ? '开启' : '关闭'}`);
+}
+
+function formatGroupWhitelist(groups, emptyHint) {
+  if (!groups?.length) return `└─ ${emptyHint}`;
+  return groups.map(g => `└─ ${g}`).join('\n');
+}
 
 export class XrkSettings extends plugin {
   constructor() {
@@ -22,17 +50,7 @@ export class XrkSettings extends plugin {
     });
   }
 
-  async save() {
-    try {
-      hub.save();
-      return true;
-    } catch (error) {
-      console.error(`保存配置时出错: ${error.message}`);
-      return false;
-    }
-  }
-
-  generateSettingsMessages(e) {
+  generateSettingsMessages() {
     const c = hub.config;
     const messages = [];
     messages.push('=== 向日葵插件设置 ===');
@@ -54,8 +72,8 @@ export class XrkSettings extends plugin {
 
     messages.push('【推送设置】');
     messages.push([
-      `❯ 整点报时推送群:\n${(c.time_groupss?.length > 0 ? c.time_groupss.map(g => `└─ ${g}`).join('\n') : '└─ 暂无白名单群')}\n发送\n【整点报时添加/删除白名单】\n来更改设置`,
-      `❯ 早报推送群:\n${(c.news_groupss?.length > 0 ? c.news_groupss.map(g => `└─ ${g}`).join('\n') : '└─ 暂无白名单群')}\n发送\n【#早报添加白名单】或【#早报删除白名单】\n来更改设置`,
+      `❯ 整点报时推送群:\n${formatGroupWhitelist(c.time_groupss, '暂无白名单群')}\n发送\n【整点报时添加/删除白名单】\n来更改设置`,
+      `❯ 早报推送群:\n${formatGroupWhitelist(c.news_groupss, '暂无白名单群')}\n发送\n【#早报添加白名单】或【#早报删除白名单】\n来更改设置`,
       `❯ 早报推送时间: ${c.news_pushtime}点\n└─ 发送\n【#修改早报推送时间8】\n来更改(0-23)`,
       `❯ 手动获取早报: 发送\n【#早报】或【#今日早报】`
     ].join('\n'));
@@ -69,86 +87,52 @@ export class XrkSettings extends plugin {
   }
 
   generateMasterInfo() {
-    const c = hub.config;
+    const core = hub.config.coremaster;
+    const others = (cfg.masterQQ || []).map(String).filter(q => q && q !== String(core));
     let masterMsg = '❯ 向日葵主人设置:';
-    if (c.master && Object.keys(c.master).length > 0) {
-      let hasMasters = false;
-      for (const [botId, masters] of Object.entries(c.master)) {
-        if (masters?.length > 0 && botId !== 'stdin') {
-          hasMasters = true;
-          masterMsg += `\n${botId}的主人：\n${masters.map(m => `└─ ${m}`).join('\n')}`;
-        }
-      }
-      if (!hasMasters) masterMsg += '\n└─ 暂无主人设置';
-    } else {
-      masterMsg += '\n└─ 暂无主人设置';
-    }
+    if (core && Number(core) > 0) masterMsg += `\n核心主人：\n└─ ${core}`;
+    if (others.length) masterMsg += `\n其他主人：\n${others.map(m => `└─ ${m}`).join('\n')}`;
+    if (!(core && Number(core) > 0) && !others.length) masterMsg += '\n└─ 暂无主人设置';
     masterMsg += '\n发送\n【#主人添加(Botqq:主人qq)】\n或\n【#主人添加(主人qq)】来更改';
     return masterMsg;
   }
 
   async showSettings(e) {
-    if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
-    const messages = this.generateSettingsMessages(e);
-    await BotUtil.makeChatRecord(e, messages, '向日葵设置', ['笨比笨比一个一个字看准了！']);
+    if (!await denyUnlessMaster(e)) return;
+    await BotUtil.makeChatRecord(e, this.generateSettingsMessages(), '向日葵设置', ['笨比笨比一个一个字看准了！']);
   }
 
-  async setHelpPriority(e) {
-    if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
-    const priority = parseInt(e.msg.replace(/^#?(向日葵|xrk)修改帮助优先级/, '').trim());
-    if (isNaN(priority) || priority % 1 !== 0) return await e.reply('❌ 请输入有效的整数数值');
-    hub.set('help_priority', priority);
-    await e.reply(`✅ 帮助优先级已修改为: ${priority}`);
+  setHelpPriority(e) {
+    return setIntegerConfig(e, /^#?(向日葵|xrk)修改帮助优先级/, 'help_priority', '帮助优先级');
   }
 
-  async setChuoPriority(e) {
-    if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
-    const priority = parseInt(e.msg.replace(/^#?(向日葵|xrk)修改戳一戳优先级/, '').trim());
-    if (isNaN(priority) || priority % 1 !== 0) return await e.reply('❌ 请输入有效的整数数值');
-    hub.set('poke_priority', priority);
-    await e.reply(`✅ 戳一戳优先级已修改为: ${priority}`);
+  setChuoPriority(e) {
+    return setIntegerConfig(e, /^#?(向日葵|xrk)修改戳一戳优先级/, 'poke_priority', '戳一戳优先级');
   }
 
-  async setChuoMasterPriority(e) {
-    if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
-    const priority = parseInt(e.msg.replace(/^#?(向日葵|xrk)修改戳一戳主人优先级/, '').trim());
-    if (isNaN(priority) || priority % 1 !== 0) return await e.reply('❌ 请输入有效的整数数值');
-    hub.set('corepoke_priority', priority);
-    await e.reply(`✅ 戳一戳主人优先级已修改为: ${priority}`);
+  setChuoMasterPriority(e) {
+    return setIntegerConfig(e, /^#?(向日葵|xrk)修改戳一戳主人优先级/, 'corepoke_priority', '戳一戳主人优先级');
   }
 
-  async toggleChuoMaster(e) {
-    if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
-    const isEnable = e.msg.includes('开启');
-    if (hub.chuomaster === isEnable) return await e.reply(`戳一戳主人已${isEnable ? '开启' : '关闭'}, 无需重复操作`);
-    hub.set('chuomaster', isEnable);
-    await e.reply(`✅ 戳一戳主人已${isEnable ? '开启' : '关闭'}`);
+  toggleChuoMaster(e) {
+    return toggleConfig(e, 'chuomaster', '戳一戳主人', () => hub.config.chuomaster);
   }
 
   async setRenderQuality(e) {
-    if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
+    if (!await denyUnlessMaster(e)) return;
     const quality = parseFloat(e.msg.replace(/^#?(向日葵|xrk)修改渲染精度/, '').trim());
-    if (isNaN(quality) || quality < 1 || quality > 3 || !/^\d+(\.\d{0,2})?$/.test(quality.toString())) {
-      return await e.reply('❌ 请输入1-3之间的数值，最多支持两位小数');
+    if (Number.isNaN(quality) || quality < 1 || quality > 3 || !/^\d+(\.\d{0,2})?$/.test(String(quality))) {
+      return e.reply('❌ 请输入1-3之间的数值，最多支持两位小数');
     }
     hub.set('screen_shot_quality', quality);
-    await e.reply(`✅ 渲染精度已修改为: ${quality}`);
+    return e.reply(`✅ 渲染精度已修改为: ${quality}`);
   }
 
-  async toggleScreenshot(e) {
-    if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
-    const isEnable = e.msg.includes('开启');
-    if (hub.screen_shot_http === isEnable) return await e.reply(`网页截图已${isEnable ? '开启' : '关闭'}, 无需重复操作`);
-    hub.set('screen_shot_http', isEnable);
-    await e.reply(`✅ 网页截图已${isEnable ? '开启' : '关闭'}`);
+  toggleScreenshot(e) {
+    return toggleConfig(e, 'screen_shot_http', '网页截图', () => hub.config.screen_shot_http);
   }
 
-  async toggleSharing(e) {
-    if (!e.isMaster) return await e.reply('❌ 您没有权限执行此操作');
-    const isEnable = e.msg.includes('开启');
-    if (hub.sharing === isEnable) return await e.reply(`资源分享已${isEnable ? '开启' : '关闭'}, 无需重复操作`);
-    hub.set('sharing', isEnable);
-    await e.reply(`✅ 资源分享已${isEnable ? '开启' : '关闭'}`);
+  toggleSharing(e) {
+    return toggleConfig(e, 'sharing', '资源分享', () => hub.config.sharing);
   }
-
 }

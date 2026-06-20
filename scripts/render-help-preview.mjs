@@ -8,7 +8,8 @@ import { parseHelpSystem } from '../lib/config-normalize.js';
 import {
   writeHelpPage,
   HELP_PAGE_WIDTH,
-  HELP_DEVICE_SCALE
+  HELP_DEVICE_SCALE,
+  filterHelpList
 } from '../lib/help-render.js';
 import { SUB_HELP_PAGES } from '../lib/sub-help-pages.js';
 
@@ -22,7 +23,7 @@ globalThis.logger = console;
 
 const helpYaml = fs.readFileSync(path.join(pluginRoot, 'config/default/help_system.yaml'), 'utf8');
 const { cfg: helpCfg, list: helpList } = parseHelpSystem(yaml.parse(helpYaml));
-const previewList = helpList.filter(g => g.group !== '向日葵资源相关功能');
+const previewList = filterHelpList(helpList, true);
 
 const jobs = [
   {

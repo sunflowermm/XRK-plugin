@@ -18,7 +18,7 @@ let imageList = [];
 
 class FileManager {
   static loadConfig() {
-    return hub.emoji_filename || baseConfig.defaultDirectory;
+    return hub.config.emoji_filename || baseConfig.defaultDirectory;
   }
 
   static saveConfig(directoryName) {

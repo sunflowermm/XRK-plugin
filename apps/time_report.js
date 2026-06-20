@@ -22,7 +22,6 @@ export class WhitelistManager extends plugin {
       ]
     });
     this.task = { name: '整点报时任务', cron: '0 0 * * * *', fnc: () => this.hourlyNotification() };
-    this.timeConfig = hub.timeConfig;
   }
 
   getRandomItem(array) {
@@ -30,7 +29,7 @@ export class WhitelistManager extends plugin {
   }
 
   getRandomEmoji() {
-    return this.getRandomItem(this.timeConfig.emojis || []);
+    return this.getRandomItem(hub.timeConfig.emojis || []);
   }
 
   async getRandomFile(dirPath, fileTypes) {
@@ -52,7 +51,7 @@ export class WhitelistManager extends plugin {
     if (!await this.checkMasterPermission(e)) return;
     const groupId = this.extractGroupId(e);
     if (!groupId) return e.reply('请在群聊中使用此命令或指定群号 ' + this.getRandomEmoji());
-    const list = [...hub.time_groupss];
+    const list = [...hub.config.time_groupss];
     if (list.includes(groupId)) return e.reply(`群号 ${groupId} 已经在白名单中呢 ${this.getRandomEmoji()}`);
     list.push(groupId);
     hub.set('time_groupss', list);
@@ -63,7 +62,7 @@ export class WhitelistManager extends plugin {
     if (!await this.checkMasterPermission(e)) return;
     const groupId = this.extractGroupId(e);
     if (!groupId) return e.reply('请在群聊中使用此命令或指定群号 ' + this.getRandomEmoji());
-    const list = [...hub.time_groupss];
+    const list = [...hub.config.time_groupss];
     if (!list.includes(groupId)) return e.reply(`群号 ${groupId} 不在白名单中呢 ${this.getRandomEmoji()}`);
     hub.set('time_groupss', list.filter(g => g !== groupId));
     await e.reply(`已从整点报时白名单中删除群号 ${groupId} ${this.getRandomEmoji()}`);
@@ -71,12 +70,12 @@ export class WhitelistManager extends plugin {
 
   async showGroups(e) {
     if (!await this.checkMasterPermission(e)) return;
-    const groups = hub.time_groupss;
+    const groups = hub.config.time_groupss;
     await e.reply(groups.length ? `当前整点报时白名单中的群号有：${groups.join(', ')} ${this.getRandomEmoji()}` : `当前整点报时白名单为空呢~ ${this.getRandomEmoji()}`);
   }
 
   async notifyGroup(groupId, hours) {
-    const message = this.getRandomItem(this.timeConfig.timeMessages || ['{hours}点'])
+    const message = this.getRandomItem(hub.timeConfig.timeMessages || ['{hours}点'])
       .replace('{hours}', hours)
       .replace('{botName}', Bot.nickname);
     const messages = [`${message} ${this.getRandomEmoji()}`];
@@ -88,8 +87,7 @@ export class WhitelistManager extends plugin {
   }
 
   async hourlyNotification() {
-    this.timeConfig = hub.timeConfig;
-    const groupList = hub.time_groupss;
+    const groupList = hub.config.time_groupss;
     if (!groupList?.length) return;
     const currentHour = moment().hour();
     for (const groupId of groupList) {

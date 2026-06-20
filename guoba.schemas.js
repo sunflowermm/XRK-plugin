@@ -6,6 +6,8 @@
  * 不支持：Textarea | MultiSelect（用 Select mode:multiple 或 GTags）
  */
 
+import { PLUGIN_REGISTRY } from './lib/config-registry.js'
+
 function sw(field, label, help = '') {
   return { field, label, ...(help ? { bottomHelpMessage: help } : {}), component: 'Switch' }
 }
@@ -326,18 +328,10 @@ export const helpSystemSchemas = [
   subform('help_system_cfg.helpList', '帮助分组', helpGroupSchemas, '分组与条目；复杂项可在 XRK 控制台编辑'),
 ]
 
-const PLUGIN_CFG_FIELDS = [
-  ['recommended_plugins_cfg', '推荐插件'],
-  ['entertainment_plugins_cfg', '文娱插件'],
-  ['game_plugins_cfg', '游戏插件'],
-  ['ip_plugins_cfg', 'IP 插件'],
-  ['js_plugins_cfg', 'JS 插件'],
-]
-
 export const pluginListSchemas = [
   divider('安装插件列表'),
-  ...PLUGIN_CFG_FIELDS.map(([field, label]) =>
-    subform(field, label, pluginItemSchemas, '与 #安装插件 展示一致')
+  ...PLUGIN_REGISTRY.map(({ guobaKey, label }) =>
+    subform(guobaKey, label, pluginItemSchemas, '与 #安装插件 展示一致')
   ),
 ]
 
@@ -356,7 +350,7 @@ export const weatherSchemas = [
       { label: '文本', value: 'text' },
     ]
   ),
-  sw('weather_cfg.include_charts', '含预报/气候曲线'),
+  sw('weather_cfg.include_charts', '含预报曲线图'),
   sw('weather_cfg.include_climate', '含气候背景图'),
   inp('weather_cfg.user_agent', 'User-Agent'),
   objForm('weather_cfg.screenshot', '天气截图参数', [
@@ -369,9 +363,10 @@ export const weatherSchemas = [
     slider('deviceScaleFactor', '清晰度', { min: 1, max: 3, step: 0.5 }),
     sel('waitUntil', '等待策略', ['domcontentloaded', 'load', 'networkidle0', 'networkidle2']),
     num('goto_timeout_ms', '打开超时(ms)', { min: 5000 }),
-    num('delayBeforeScreenshot', '截图前等待(ms)', { min: 500, max: 20000 }),
     num('imageWaitTimeout', '图片等待(ms)', { min: 0 }),
     num('fontWaitTimeout', '字体等待(ms)', { min: 0 }),
+    num('delayBeforeScreenshot', '截图前等待(ms)', { min: 500, max: 20000 }),
+    num('selectorTimeout', '选择器等待(ms)', { min: 1000 }),
     sw('wait_for_hour', '等待小时表'),
     sw('wait_for_charts', '等待图表'),
     radio('imgType', '输出格式', [
@@ -379,6 +374,18 @@ export const weatherSchemas = [
       { label: 'PNG', value: 'png' },
     ]),
     num('quality', 'JPEG 质量', { min: 1, max: 100 }),
+    objForm('clip', '裁切参数', [
+      num('width', '输出宽度(px)', { min: 640 }),
+      inp('anchor', '左对齐锚点'),
+      inp('bottom_anchor', '底部锚点'),
+      tags('selectors', '裁切区域选择器'),
+      objForm('padding', '边距(px)', [
+        num('top', '上', { min: 0 }),
+        num('left', '左', { min: 0 }),
+        num('right', '右', { min: 0 }),
+        num('bottom', '下', { min: 0 }),
+      ]),
+    ]),
   ]),
 ]
 
@@ -391,6 +398,12 @@ export const screenshotSchemas = [
     num('width', '宽度', { min: 320 }),
     num('height', '高度', { min: 240 }),
   ]),
+  num('screenshot_cfg.maxFullPageHeight', '整页最大高度(px)', { min: 1000 }),
+  sw('screenshot_cfg.lazyLoadScroll', '懒加载滚动'),
+  num('screenshot_cfg.imageWaitTimeout', '图片等待(ms)', { min: 0 }),
+  num('screenshot_cfg.fontWaitTimeout', '字体等待(ms)', { min: 0 }),
+  num('screenshot_cfg.delayBeforeScreenshot', '截图前延迟(ms)', { min: 0 }),
+  num('screenshot_cfg.pageGotoTimeout', '页面打开超时(ms)', { min: 5000 }),
   sel('screenshot_cfg.waitUntil', '等待策略', ['domcontentloaded', 'load', 'networkidle0', 'networkidle2']),
   objForm('screenshot_cfg.urlProcessing', 'URL 处理', [
     num('maxUrlsPerMessage', '每消息最多 URL', { min: 1 }),
@@ -402,11 +415,24 @@ export const screenshotSchemas = [
   tags('screenshot_cfg.blacklistIPs', 'IP 黑名单(CIDR)'),
   tags('screenshot_cfg.allowedLocalAddresses', '允许的本地地址'),
   tags('screenshot_cfg.filteredParams', '过滤的 URL 参数'),
+  objForm('screenshot_cfg.blockedExtensions', '拦截扩展名', [
+    tags('images', '图片'),
+    tags('media', '媒体'),
+    tags('documents', '文档'),
+    tags('archives', '压缩包'),
+    tags('executables', '可执行文件'),
+    tags('code', '代码/脚本'),
+    tags('fonts', '字体'),
+  ]),
   objForm('screenshot_cfg.screenshotConfig', '截图参数', [
     num('width', '宽度', { min: 320 }),
     num('height', '高度', { min: 240 }),
     sel('waitUntil', '等待策略', ['domcontentloaded', 'load', 'networkidle0', 'networkidle2']),
     sw('fullPage', '整页截图'),
+    num('maxFullPageHeight', '整页最大高度', { min: 1000 }),
+    sw('lazyLoadScroll', '懒加载滚动'),
+    num('imageWaitTimeout', '图片等待(ms)', { min: 0 }),
+    num('delayBeforeScreenshot', '截图前延迟(ms)', { min: 0 }),
     radio('imgType', '输出格式', [
       { label: 'JPEG', value: 'jpeg' },
       { label: 'PNG', value: 'png' },

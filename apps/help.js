@@ -1,10 +1,7 @@
+import plugin from '../../../lib/plugins/plugin.js';
 import { takeScreenshot } from '../components/util/takeScreenshot.js';
 import hub from '../lib/xrk-hub.js';
-import { captureHelpScreenshot } from '../lib/help-render.js';
-
-function filterHelpList() {
-  return hub.helpList.filter(g => g.group !== '向日葵资源相关功能' || hub.sharing);
-}
+import { captureHelpScreenshot, filterHelpList } from '../lib/help-render.js';
 
 export class showmainHelp extends plugin {
   constructor() {
@@ -12,8 +9,13 @@ export class showmainHelp extends plugin {
       name: '向日葵帮助插件',
       dsc: 'xrk帮助',
       event: 'message',
-      priority: hub.help_priority,
+      priority: hub.config.help_priority,
       rule: [{ reg: '^#?(xrk|向日葵)?(插件)?(帮助|help|Help|菜单|功能)', fnc: 'generateHelpScreenshot' }],
+    });
+    hub.registerRuntime({
+      id: 'xrk-help-priority',
+      events: ['config'],
+      apply: () => { this.priority = hub.config.help_priority; }
     });
   }
 

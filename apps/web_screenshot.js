@@ -19,6 +19,11 @@ export class WebpageScreenshot extends plugin {
       ]
     });
     this.applyScreenshotConfig();
+    hub.registerRuntime({
+      id: 'xrk-web-screenshot',
+      events: ['config', 'screenshot'],
+      apply: () => this.applyScreenshotConfig()
+    });
   }
 
   applyScreenshotConfig() {

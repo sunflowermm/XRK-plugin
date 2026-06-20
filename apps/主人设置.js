@@ -158,7 +158,7 @@ export class Example extends plugin {
     const otherConfig = Cfg.getConfig('other');
     otherConfig.masterQQ = otherConfig.masterQQ || [];
 
-    if (targetQQ == hub.coremaster) {
+    if (targetQQ == hub.config.coremaster) {
       await e.reply('滚啊，你不能删核心主人');
       return;
     }

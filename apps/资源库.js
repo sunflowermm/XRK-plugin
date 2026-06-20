@@ -97,7 +97,7 @@ export class AvatarPlugin extends plugin {
   }
 
   checkSharing() {
-    return hub.sharing;
+    return hub.config.sharing;
   }
 
   async sendImgFromSources(sources) {

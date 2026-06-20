@@ -149,7 +149,7 @@ export class GroupLike extends plugin {
     }
 
     const groupId = e.group_id;
-    const list = [...xrkcfg.thumwhiteList];
+    const list = [...hub.config.thumwhiteList];
 
     if (list.includes(groupId)) {
       await this.reply('该群已在白名单中~');
@@ -158,7 +158,7 @@ export class GroupLike extends plugin {
 
     list.push(groupId);
     try {
-      xrkcfg.set('thumwhiteList', list);
+      hub.set('thumwhiteList', list);
       await this.reply('白名单添加成功~');
     } catch (err) {
       logger.error(`保存群点赞白名单失败: ${err}`);
@@ -174,7 +174,7 @@ export class GroupLike extends plugin {
     }
 
     const groupId = e.group_id;
-    const list = [...xrkcfg.thumwhiteList];
+    const list = [...hub.config.thumwhiteList];
 
     if (list.length === 0) {
       await this.reply('白名单为空');
@@ -189,7 +189,7 @@ export class GroupLike extends plugin {
 
     list.splice(index, 1);
     try {
-      xrkcfg.set('thumwhiteList', list);
+      hub.set('thumwhiteList', list);
       await this.reply('白名单删除成功~');
     } catch (err) {
       logger.error(`保存群点赞白名单失败: ${err}`);
@@ -257,7 +257,7 @@ export class GroupLike extends plugin {
     }
 
     const groupId = e.group_id;
-    const whiteList = xrkcfg.thumwhiteList;
+    const whiteList = hub.config.thumwhiteList;
 
     if (whiteList.length > 0 && !whiteList.includes(groupId)) {
       await this.reply('该群不在白名单中，无法执行点赞任务');
@@ -297,7 +297,7 @@ export class GroupLike extends plugin {
 
     try {
       for (let [_, bot] of bots) {
-        const whiteList = hub.thumwhiteList;
+        const whiteList = hub.config.thumwhiteList;
         const groups = whiteList.length > 0 ? whiteList : Array.from(bot.gl.keys());
 
         for (let groupId of groups) {

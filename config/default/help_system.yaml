@@ -1,5 +1,5 @@
 # 向日葵帮助系统配置（标准模板，首次运行复制到 data/xrkconfig/help_system.yaml）
-# 与 lib/help_system.js 结构对应，用户可编辑
+# 解析：lib/config-normalize.js parseHelpSystem
 
 title: 向日葵帮助
 subTitle: xrk-bot && XRK
@@ -13,6 +13,9 @@ style:
   descColor: '#475569'
   footerColor: 'rgba(248,250,252,0.72)'
   contBgColor: 'rgba(255, 255, 255, 0.08)'
+  groupBgColor: 'linear-gradient(90deg, rgba(94, 234, 212, 0.04), rgba(255, 255, 255, 0.03))'
+  rowBgColor1: 'rgba(255, 255, 255, 0.01)'
+  rowBgColor2: 'rgba(255, 255, 255, 0.03)'
 
 helpList:
   - group: 向日葵功能性插件

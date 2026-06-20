@@ -3,18 +3,66 @@
  * 子配置：config、help_system、ai、poke_responses、time_config、screenshot、weather、安装插件列表(5)
  * 读写 data/xrkconfig/*，变更后由 lib/xrk-hub.js 统一 reload
  */
-import path from 'path';
 import ConfigBase from '../../../lib/commonconfig/commonconfig.js';
-import { normalizeTimeMessages, timeMessagesToFormRows } from '../lib/config-normalize.js';
+import { readSubconfigForUi, writeSubconfigFromUi } from '../lib/config-persist.js';
+import { getRelConfigPath, getRelDefaultPath } from '../lib/config-paths.js';
 import hub from '../lib/xrk-hub.js';
-// 使用相对路径，交由 ConfigBase 基类基于项目根目录进行拼接，
-// 避免出现「cwd + 绝对路径」导致的路径重复问题。
-const XRK_CONFIG_DIR = path.join('data', 'xrkconfig');
-const XRK_DEFAULT_DIR = path.join('plugins', 'XRK-plugin', 'config', 'default');
-const getXrkPath = (name, ext = 'yaml') => () => path.join(XRK_CONFIG_DIR, `${name}.${ext}`);
-const getXrkDefaultPath = (name, ext = 'json') => () => path.join(XRK_DEFAULT_DIR, `${name}.${ext}`);
 
-const PLUGIN_LIST_NAMES = ['recommended_plugins', 'entertainment_plugins', 'game_plugins', 'ip_plugins', 'js_plugins'];
+const getXrkPath = (name, ext = 'yaml') => () => getRelConfigPath(name, ext);
+const getXrkDefaultPath = (name, ext = 'json') => () => getRelDefaultPath(name, ext);
+
+const weatherClipFields = {
+  width: { type: 'number', label: '输出宽度(px)', min: 640, default: 1240, component: 'InputNumber' },
+  x: { type: 'number', label: '裁切左起点', description: '留空/null 则按 anchor 左缘', component: 'InputNumber' },
+  anchor: { type: 'string', label: '左对齐锚点选择器', default: '.weather-header .container', component: 'Input' },
+  bottom_anchor: { type: 'string', label: '底部锚点选择器', default: '#climateDiv .hb', component: 'Input' },
+  selectors: {
+    type: 'array',
+    label: '裁切区域选择器',
+    itemType: 'string',
+    default: ['.weather-header', '#realWarn', '#realChart', '#climateDiv'],
+    component: 'Tags'
+  },
+  padding: {
+    type: 'object',
+    label: '裁切边距(px)',
+    component: 'SubForm',
+    fields: {
+      top: { type: 'number', label: '上', min: 0, default: 52, component: 'InputNumber' },
+      left: { type: 'number', label: '左', min: 0, default: 0, component: 'InputNumber' },
+      right: { type: 'number', label: '右', min: 0, default: 0, component: 'InputNumber' },
+      bottom: { type: 'number', label: '下', min: 0, default: 0, component: 'InputNumber' }
+    }
+  }
+};
+
+const weatherScreenshotFields = {
+  mode: { type: 'string', label: '截图模式', enum: ['live', 'html'], default: 'live', component: 'Select' },
+  width: { type: 'number', label: '视口宽度', min: 800, default: 1500, component: 'InputNumber' },
+  height: { type: 'number', label: '视口高度', min: 600, default: 1000, component: 'InputNumber' },
+  deviceScaleFactor: { type: 'number', label: '渲染精度', min: 1, max: 3, default: 2, component: 'InputNumber' },
+  waitUntil: { type: 'string', label: '等待策略', enum: ['domcontentloaded', 'load', 'networkidle0', 'networkidle2'], default: 'networkidle2', component: 'Select' },
+  goto_timeout_ms: { type: 'number', label: '页面加载超时(ms)', min: 5000, default: 45000, component: 'InputNumber' },
+  imageWaitTimeout: { type: 'number', label: '图片等待(ms)', min: 0, default: 10000, component: 'InputNumber' },
+  fontWaitTimeout: { type: 'number', label: '字体等待(ms)', min: 0, default: 4000, component: 'InputNumber' },
+  delayBeforeScreenshot: { type: 'number', label: '截图前延迟(ms)', min: 0, default: 3500, component: 'InputNumber' },
+  selectorTimeout: { type: 'number', label: '选择器等待(ms)', min: 1000, default: 25000, component: 'InputNumber' },
+  wait_for_hour: { type: 'boolean', label: '等待小时表渲染', default: true, component: 'Switch' },
+  wait_for_charts: { type: 'boolean', label: '等待图表渲染', default: true, component: 'Switch' },
+  imgType: { type: 'string', label: '输出格式', enum: ['jpeg', 'png'], default: 'jpeg', component: 'Select' },
+  quality: { type: 'number', label: 'JPEG 质量', min: 1, max: 100, default: 92, component: 'InputNumber' },
+  clip: { type: 'object', label: '裁切参数', component: 'SubForm', fields: weatherClipFields }
+};
+
+const blockedExtensionFields = {
+  images: { type: 'array', label: '图片', itemType: 'string', default: ['jpg', 'jpeg', 'png', 'gif'], component: 'Tags' },
+  media: { type: 'array', label: '媒体', itemType: 'string', default: ['mp4', 'mp3', 'avi'], component: 'Tags' },
+  documents: { type: 'array', label: '文档', itemType: 'string', default: ['pdf', 'doc', 'docx'], component: 'Tags' },
+  archives: { type: 'array', label: '压缩包', itemType: 'string', default: ['zip', 'rar', '7z'], component: 'Tags' },
+  executables: { type: 'array', label: '可执行文件', itemType: 'string', default: ['exe', 'msi', 'apk'], component: 'Tags' },
+  code: { type: 'array', label: '代码/脚本', itemType: 'string', default: ['js', 'css', 'py'], component: 'Tags' },
+  fonts: { type: 'array', label: '字体', itemType: 'string', default: ['ttf', 'woff', 'woff2'], component: 'Tags' }
+};
 
 export default class XrkConfig extends ConfigBase {
   constructor() {
@@ -473,63 +521,23 @@ export default class XrkConfig extends ConfigBase {
         schema: {
           fields: {
             enabled: { type: 'boolean', label: '启用查天气', default: true, component: 'Switch' },
-            max_cities: {
-              type: 'number',
-              label: '单次最多城市数',
-              description: '#查天气 一次指令最多查询几个城市',
-              min: 1,
-              max: 10,
-              default: 5,
-              component: 'InputNumber'
-            },
-            forecast_days: {
-              type: 'number',
-              label: '预报天数',
-              description: '从页面 7 天预报区截取的天数（1-7）',
-              min: 1,
-              max: 7,
-              default: 7,
-              component: 'InputNumber'
-            },
-            request_timeout_ms: {
-              type: 'number',
-              label: '请求超时(ms)',
-              min: 3000,
-              default: 15000,
-              component: 'InputNumber'
-            },
-            reply_mode: {
-              type: 'string',
-              label: '回复形式',
-              description: 'text 为文字卡片，image 为官网预报区截图',
-              enum: ['text', 'image'],
-              default: 'image',
-              component: 'Select'
-            },
+            max_cities: { type: 'number', label: '单次最多城市数', min: 1, max: 10, default: 5, component: 'InputNumber' },
+            forecast_days: { type: 'number', label: '预报天数', min: 1, max: 7, default: 7, component: 'InputNumber' },
+            request_timeout_ms: { type: 'number', label: '请求超时(ms)', min: 3000, default: 20000, component: 'InputNumber' },
+            reply_mode: { type: 'string', label: '回复形式', enum: ['text', 'image'], default: 'image', component: 'Select' },
+            include_charts: { type: 'boolean', label: '含预报曲线图', default: true, component: 'Switch' },
+            include_climate: { type: 'boolean', label: '含气候背景图', default: true, component: 'Switch' },
             user_agent: {
               type: 'string',
               label: 'User-Agent',
-              description: '访问 nmc.cn 时使用的浏览器标识',
-              default: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              default: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
               component: 'Input'
             },
-            include_charts: { type: 'boolean', label: '截图含预报图表', default: true, component: 'Switch' },
-            include_climate: { type: 'boolean', label: '截图含气候曲线', default: true, component: 'Switch' },
             screenshot: {
               type: 'object',
-              label: '截图参数',
+              label: '天气截图参数',
               component: 'SubForm',
-              fields: {
-                mode: { type: 'string', label: '模式', enum: ['live', 'html'], default: 'live', component: 'Select' },
-                width: { type: 'number', label: '宽度', min: 800, default: 1500, component: 'InputNumber' },
-                height: { type: 'number', label: '高度', min: 600, default: 1000, component: 'InputNumber' },
-                deviceScaleFactor: { type: 'number', label: '渲染精度', min: 1, max: 3, default: 2, component: 'InputNumber' },
-                waitUntil: { type: 'string', label: '等待策略', enum: ['domcontentloaded', 'load', 'networkidle0', 'networkidle2'], default: 'networkidle2', component: 'Select' },
-                goto_timeout_ms: { type: 'number', label: '页面加载超时(ms)', min: 5000, default: 45000, component: 'InputNumber' },
-                delayBeforeScreenshot: { type: 'number', label: '截图前延迟(ms)', min: 0, default: 3500, component: 'InputNumber' },
-                imgType: { type: 'string', label: '输出格式', enum: ['jpeg', 'png'], default: 'jpeg', component: 'Select' },
-                quality: { type: 'number', label: 'JPEG质量', min: 1, max: 100, default: 92, component: 'InputNumber' }
-              }
+              fields: weatherScreenshotFields
             }
           }
         }
@@ -544,61 +552,65 @@ export default class XrkConfig extends ConfigBase {
         schema: {
           fields: {
             enabled: { type: 'boolean', label: '启用网页截图', default: false, component: 'Switch' },
-            quality: { type: 'number', label: '渲染精度', description: '映射到 deviceScaleFactor', min: 1, max: 3, default: 2, component: 'InputNumber' },
+            quality: { type: 'number', label: '渲染精度', description: '映射为 deviceScaleFactor', min: 1, max: 3, default: 1.5, component: 'InputNumber' },
             viewport: {
               type: 'object',
               label: '默认视口',
               component: 'SubForm',
               fields: {
-                width: { type: 'number', label: '宽度', min: 320, default: 1536, component: 'InputNumber' },
-                height: { type: 'number', label: '高度', min: 240, default: 2138, component: 'InputNumber' }
+                width: { type: 'number', label: '宽度', min: 320, default: 1280, component: 'InputNumber' },
+                height: { type: 'number', label: '高度', min: 240, default: 900, component: 'InputNumber' }
               }
             },
+            maxFullPageHeight: { type: 'number', label: '整页最大高度(px)', min: 1000, default: 6000, component: 'InputNumber' },
+            lazyLoadScroll: { type: 'boolean', label: '懒加载滚动', default: true, component: 'Switch' },
+            imageWaitTimeout: { type: 'number', label: '图片等待(ms)', min: 0, default: 3000, component: 'InputNumber' },
+            fontWaitTimeout: { type: 'number', label: '字体等待(ms)', min: 0, default: 800, component: 'InputNumber' },
+            delayBeforeScreenshot: { type: 'number', label: '截图前延迟(ms)', min: 0, default: 2000, component: 'InputNumber' },
+            pageGotoTimeout: { type: 'number', label: '页面打开超时(ms)', min: 5000, default: 60000, component: 'InputNumber' },
             waitUntil: {
               type: 'string',
               label: '等待策略',
-              description: '渲染等待策略',
               enum: ['domcontentloaded', 'load', 'networkidle0', 'networkidle2'],
               default: 'networkidle2',
               component: 'Select'
             },
             urlProcessing: {
               type: 'object',
-              label: 'URL处理',
+              label: 'URL 处理',
               component: 'SubForm',
               fields: {
-                maxUrlsPerMessage: { type: 'number', label: '每条消息最多截图URL数', min: 1, default: 5, component: 'InputNumber' },
-                minUrlLength: { type: 'number', label: 'URL最小长度', min: 1, default: 4, component: 'InputNumber' },
-                maxUrlLength: { type: 'number', label: 'URL最大长度', min: 16, default: 2083, component: 'InputNumber' }
+                maxUrlsPerMessage: { type: 'number', label: '每条消息最多 URL 数', min: 1, default: 5, component: 'InputNumber' },
+                minUrlLength: { type: 'number', label: 'URL 最小长度', min: 1, default: 4, component: 'InputNumber' },
+                maxUrlLength: { type: 'number', label: 'URL 最大长度', min: 16, default: 2083, component: 'InputNumber' }
               }
             },
             whitelistDomains: { type: 'array', label: '域名白名单', itemType: 'string', default: [], component: 'Tags' },
             blacklistDomains: { type: 'array', label: '域名黑名单', itemType: 'string', default: [], component: 'Tags' },
-            blacklistIPs: { type: 'array', label: 'IP黑名单(CIDR)', itemType: 'string', default: [], component: 'Tags' },
+            blacklistIPs: { type: 'array', label: 'IP 黑名单(CIDR)', itemType: 'string', default: [], component: 'Tags' },
             allowedLocalAddresses: { type: 'array', label: '允许的本地地址', itemType: 'string', default: ['localhost', '127.0.0.1'], component: 'Tags' },
-            filteredParams: { type: 'array', label: '过滤的URL参数', itemType: 'string', default: [], component: 'Tags' },
+            filteredParams: { type: 'array', label: '过滤的 URL 参数', itemType: 'string', default: [], component: 'Tags' },
             blockedExtensions: {
               type: 'object',
               label: '拦截的文件扩展名',
-              description: '键为分类名，值为扩展名数组',
               component: 'SubForm',
-              fields: {
-                media: { type: 'array', label: '媒体', itemType: 'string', default: ['mp4', 'mp3', 'avi'], component: 'Tags' },
-                archive: { type: 'array', label: '压缩包', itemType: 'string', default: ['zip', 'rar', '7z'], component: 'Tags' }
-              }
+              fields: blockedExtensionFields
             },
             screenshotConfig: {
               type: 'object',
-              label: '截图参数',
-              description: '透传给渲染器 screenshot() 的参数（高级）',
+              label: '截图参数（透传渲染器）',
               component: 'SubForm',
               fields: {
-                width: { type: 'number', label: '宽度', min: 320, default: 1536, component: 'InputNumber' },
-                height: { type: 'number', label: '高度', min: 240, default: 2138, component: 'InputNumber' },
+                width: { type: 'number', label: '宽度', min: 320, default: 1280, component: 'InputNumber' },
+                height: { type: 'number', label: '高度', min: 240, default: 900, component: 'InputNumber' },
                 waitUntil: { type: 'string', label: '等待策略', enum: ['domcontentloaded', 'load', 'networkidle0', 'networkidle2'], default: 'networkidle2', component: 'Select' },
-                fullPage: { type: 'boolean', label: '整页截图', default: true, component: 'Switch' },
+                fullPage: { type: 'boolean', label: '整页截图', default: false, component: 'Switch' },
+                maxFullPageHeight: { type: 'number', label: '整页最大高度', min: 1000, default: 6000, component: 'InputNumber' },
+                lazyLoadScroll: { type: 'boolean', label: '懒加载滚动', default: true, component: 'Switch' },
+                imageWaitTimeout: { type: 'number', label: '图片等待(ms)', min: 0, default: 3000, component: 'InputNumber' },
+                delayBeforeScreenshot: { type: 'number', label: '截图前延迟(ms)', min: 0, default: 2000, component: 'InputNumber' },
                 imgType: { type: 'string', label: '输出格式', enum: ['jpeg', 'png'], default: 'jpeg', component: 'Select' },
-                quality: { type: 'number', label: 'JPEG质量', min: 0, max: 100, default: 100, component: 'InputNumber' }
+                quality: { type: 'number', label: 'JPEG 质量', min: 0, max: 100, default: 85, component: 'InputNumber' }
               }
             }
           }
@@ -752,72 +764,14 @@ export default class XrkConfig extends ConfigBase {
     if (!name) {
       return { name: this.name, displayName: this.displayName, description: this.description, configs: this.getConfigList() };
     }
-    if (name === 'ai') {
-      const raw = await this._invoke(name, 'read');
-      return { entries: Object.entries(raw || {}).map(([keyword, replies]) => ({ keyword, replies: Array.isArray(replies) ? replies : [] })) };
-    }
-    if (name === 'time_config') {
-      const raw = await this._invoke(name, 'read');
-      return {
-        emojis: Array.isArray(raw?.emojis) ? raw.emojis : [],
-        timeMessages: timeMessagesToFormRows(raw?.timeMessages)
-      };
-    }
-    if (PLUGIN_LIST_NAMES.includes(name)) {
-      const raw = await this._invoke(name, 'read');
-      const arr = Array.isArray(raw?.list) ? raw.list : [];
-      return {
-        list: arr.map(item => ({
-          name: item?.name ?? '',
-          cn_name: item?.cn_name ?? '',
-          anothername: item?.anothername ?? '',
-          description: item?.description ?? '',
-          git: item?.git ?? ''
-        }))
-      };
-    }
-    return this._invoke(name, 'read');
+    return readSubconfigForUi(name, await this._invoke(name, 'read'));
   }
 
   async write(name, data, options = {}) {
     if (!name) throw new Error('XrkConfig 写入需要指定子配置名称');
-    let result;
-    if (name === 'ai' && data && Array.isArray(data.entries)) {
-      const obj = {};
-      for (const { keyword, replies } of data.entries) {
-        if (keyword != null && String(keyword).trim() !== '') {
-          obj[String(keyword).trim()] = Array.isArray(replies) ? replies : [];
-        }
-      }
-      result = await this._invoke(name, 'write', obj, options);
-      hub.reload(name);
-      return result;
-    }
-    if (name === 'time_config' && data && typeof data === 'object') {
-      const payload = {
-        emojis: Array.isArray(data.emojis) ? data.emojis : [],
-        timeMessages: normalizeTimeMessages(data.timeMessages)
-      };
-      result = await this._invoke(name, 'write', payload, options);
-      hub.reload(name);
-      return result;
-    }
-    if (PLUGIN_LIST_NAMES.includes(name) && data && Array.isArray(data.list)) {
-      const arr = data.list
-        .filter(item => item && (item.name != null && String(item.name).trim() !== ''))
-        .map(item => ({
-          name: String(item.name ?? '').trim(),
-          cn_name: String(item.cn_name ?? '').trim(),
-          anothername: String(item.anothername ?? '').trim(),
-          description: String(item.description ?? '').trim(),
-          git: String(item.git ?? '').trim()
-        }));
-      result = await this._invoke(name, 'write', arr, options);
-      hub.reload(name);
-      return result;
-    }
-    result = await this._invoke(name, 'write', data, options);
-    if (name) hub.reload(name);
+    const payload = writeSubconfigFromUi(name, data);
+    const result = await this._invoke(name, 'write', payload, options);
+    hub.reload(name);
     return result;
   }
 

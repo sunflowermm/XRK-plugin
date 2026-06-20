@@ -1,24 +1,23 @@
 import plugin from '../../../lib/plugins/plugin.js'
 import common from '../../../lib/common/common.js'
-import hub from '../lib/xrk-hub.js'
-import fs from 'fs'
 import path from 'path'
+import hub from '../lib/xrk-hub.js'
+import { getDefaultMainConfig } from '../lib/config-normalize.js'
 import { FileUtils } from '../../../lib/utils/file-utils.js'
 
-const xrkcfg = hub
 const ROOT_PATH = process.cwd()
 const DEFAULT_IMAGE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/emoji/戳一戳表情')
 const DEFAULT_VOICE_DIR = path.join(ROOT_PATH, 'plugins/XRK-plugin/resources/voice')
 
 /** 获取戳一戳图片目录（支持配置覆盖） */
 function getImageDir() {
-  const cfg = xrkcfg?.poke?.paths?.image_dir
+  const cfg = hub.config.poke?.paths?.image_dir
   return cfg ? path.isAbsolute(cfg) ? cfg : path.join(ROOT_PATH, cfg) : DEFAULT_IMAGE_DIR
 }
 
 /** 获取戳一戳语音目录（支持配置覆盖） */
 function getVoiceDir() {
-  const cfg = xrkcfg?.poke?.paths?.voice_dir
+  const cfg = hub.config.poke?.paths?.voice_dir
   return cfg ? path.isAbsolute(cfg) ? cfg : path.join(ROOT_PATH, cfg) : DEFAULT_VOICE_DIR
 }
 
@@ -137,16 +136,23 @@ export class UniversalPoke extends plugin {
       name: '向日葵超级戳一戳',
       dsc: '模块化的戳一戳系统',
       event: 'notice.group.poke',
-      priority: xrkcfg.poke?.priority ?? xrkcfg.poke_priority ?? -5000,
+      priority: hub.config.poke?.priority ?? hub.config.poke_priority ?? -5000,
       rule: [{ fnc: 'handlePoke', log: false }]
     })
     registerPokeEngine(this)
     this.init()
+    hub.registerRuntime({
+      id: 'xrk-poke-priority',
+      events: ['config'],
+      apply: () => {
+        this.priority = hub.config.poke?.priority ?? hub.config.poke_priority ?? -5000
+      }
+    })
   }
 
   /** 初始化模块系统 */
   init() {
-    const config = xrkcfg.poke || {}
+    const config = hub.config.poke || {}
     const modules = config.modules || {}
     
     this.modules = {
@@ -204,17 +210,13 @@ export class UniversalPoke extends plugin {
   }
 
   getResponses() {
-    return hub.pokeResponses
+    return hub.config.pokeResponses
   }
 
   /** 运行时读取 poke.modules 开关（与 commonconfig 一致） */
   isModuleEnabled(name) {
-    const modules = xrkcfg.poke?.modules || {}
-    const defaults = {
-      daily_rewards: true, festival: true, basic: true, mood: true, intimacy: true,
-      achievement: true, special: true, punishment: true, pokeback: true,
-      image: true, voice: true, master: true
-    }
+    const modules = hub.config.poke?.modules || {}
+    const defaults = getDefaultMainConfig().poke.modules
     return modules[name] ?? defaults[name] ?? true
   }
 
@@ -222,7 +224,7 @@ export class UniversalPoke extends plugin {
   async handlePoke(e) {
     try {
       // 全局开关
-      if (!xrkcfg.poke?.enabled) return false
+      if (!hub.config.poke?.enabled) return false
 
       // 忽略自己戳自己
       if (e.operator_id === e.target_id) return true
@@ -292,7 +294,7 @@ export class UniversalPoke extends plugin {
       ])
       
       // 如果启用了主人保护图片（使用本地戳一戳图库，不依赖外部 API）
-      if (xrkcfg.poke?.master_image) {
+      if (hub.config.poke?.master_image) {
         try {
           const imagePath = pickRandomPokeImagePath()
           if (imagePath) {
@@ -306,7 +308,7 @@ export class UniversalPoke extends plugin {
       }
       
       // 如果启用了主人保护惩罚
-      if (xrkcfg.poke?.master_punishment) {
+      if (hub.config.poke?.master_punishment) {
         await this.punishMasterPoker(e, identities, record)
       }
       
@@ -326,7 +328,7 @@ export class UniversalPoke extends plugin {
       if (record.count > 10) punishLevel = 3
       
       // 尝试禁言（概率从配置 master_chances.mute 读取）
-      const muteChance = (xrkcfg.poke?.master_chances?.mute ?? 0.5) * punishLevel
+      const muteChance = (hub.config.poke?.master_chances?.mute ?? 0.5) * punishLevel
       if (this.canMute(identities) && Math.random() < muteChance) {
         const muteTime = Math.min(300 * punishLevel * record.count, 86400) // 最多禁言24小时
         
@@ -343,8 +345,8 @@ export class UniversalPoke extends plugin {
       }
       
       // 反戳惩罚（概率从配置 master_chances.pokeback 读取）
-      const pokebackChance = xrkcfg.poke?.master_chances?.pokeback ?? 0.7
-      if (xrkcfg.poke?.pokeback_enabled && Math.random() < pokebackChance) {
+      const pokebackChance = hub.config.poke?.master_chances?.pokeback ?? 0.7
+      if (hub.config.poke?.pokeback_enabled && Math.random() < pokebackChance) {
         const pokeReplies = this.getResponses().master_protection?.punishments?.poke || ["反击！"]
         const reply = pokeReplies[Math.floor(Math.random() * pokeReplies.length)]
         await e.reply(reply)
@@ -363,7 +365,7 @@ export class UniversalPoke extends plugin {
 
   /** 检查冷却时间 */
   async checkCooldown(userId, type) {
-    const cooldowns = xrkcfg.poke?.cooldowns || {}
+    const cooldowns = hub.config.poke?.cooldowns || {}
     const cooldownTime = cooldowns[type] || 3000
     
     const key = `${REDIS_PREFIX.COOLDOWN}${type}:${userId}`
@@ -426,7 +428,7 @@ export class UniversalPoke extends plugin {
 
   /** 根据当前小时获取时段（支持配置覆盖，兼容数组 [5,9] 与字符串 "5,9"） */
   getTimeEffect(hour) {
-    const slots = xrkcfg.poke?.time_slots || {}
+    const slots = hub.config.poke?.time_slots || {}
     const parseRange = (v) => {
       if (Array.isArray(v) && v.length >= 2) return v.map(Number)
       if (typeof v === 'string') {
@@ -465,7 +467,7 @@ export class UniversalPoke extends plugin {
           results[name] = await module.execute(e, userState, identities)
           
           // 如果某个模块处理成功，有一定概率跳过后续模块（可配置）
-          const skipChance = xrkcfg.poke?.module_skip_chance ?? 0.3
+          const skipChance = hub.config.poke?.module_skip_chance ?? 0.3
           if (results[name] && Math.random() < skipChance) {
             break
           }
@@ -489,7 +491,7 @@ export class UniversalPoke extends plugin {
   async dailyRewardsSystem(e, userState) {
     const dailyCount = await this.getDailyCount(e.operator_id)
     const rewards = this.getResponses().daily_rewards || {}
-    const p = xrkcfg.poke?.chances || {}
+    const p = hub.config.poke?.chances || {}
 
     if (dailyCount === 1 && rewards.first?.length && Math.random() < (p.daily_first ?? 0.6)) {
       return this.sendFromPool(e, rewards.first, userState, '🎁 ')
@@ -507,7 +509,7 @@ export class UniversalPoke extends plugin {
     const festival = this.getCurrentFestival()
     if (!festival) return false
     const replies = this.getResponses().festival_effects?.[festival]
-    const chance = xrkcfg.poke?.chances?.festival ?? 0.15
+    const chance = hub.config.poke?.chances?.festival ?? 0.15
     if (!replies?.length || Math.random() > chance) return false
     return this.sendFromPool(e, replies, userState, '🎉 ')
   }
@@ -536,7 +538,7 @@ export class UniversalPoke extends plugin {
 
   /** 心情系统模块 */
   async moodSystem(e, userState, identities) {
-    const p = xrkcfg.poke?.chances || {}
+    const p = hub.config.poke?.chances || {}
     if (Math.random() >= (p.mood_change ?? 0.2)) return false
 
     const moodChange = this.calculateMoodChange(userState, identities)
@@ -612,7 +614,7 @@ export class UniversalPoke extends plugin {
 
   /** 特殊效果模块 */
   async specialEffects(e, userState) {
-    const p = xrkcfg.poke?.chances || {}
+    const p = hub.config.poke?.chances || {}
     if (!(await this.checkCooldown(e.operator_id, 'special_effect'))) return false
 
     if (Math.random() < (p.special_trigger ?? 0.15)) {
@@ -634,7 +636,7 @@ export class UniversalPoke extends plugin {
   /** 惩罚系统模块 */
   async punishmentSystem(e, userState, identities) {
     if (userState.consecutivePokes <= 5) return false
-    const p = xrkcfg.poke?.chances || {}
+    const p = hub.config.poke?.chances || {}
     if (!(await this.checkCooldown(e.operator_id, 'punishment'))) return false
     if (Math.random() >= (p.punishment ?? 0.3)) {
       userState.moodValue = Math.max(0, userState.moodValue - userState.consecutivePokes * 2)
@@ -658,8 +660,8 @@ export class UniversalPoke extends plugin {
 
   /** 反戳系统模块（基准概率从配置 pokeback_base_chance 读取） */
   async pokebackSystem(e, userState, identities) {
-    if (!xrkcfg.poke?.pokeback_enabled) return false
-    let chance = xrkcfg.poke?.pokeback_base_chance ?? 0.3
+    if (!hub.config.poke?.pokeback_enabled) return false
+    let chance = hub.config.poke?.pokeback_base_chance ?? 0.3
     if (userState.mood === 'angry') chance += 0.3
     if (userState.consecutivePokes > 5) chance += 0.2
     if (identities.operatorIsMaster) chance -= 0.2
@@ -677,7 +679,7 @@ export class UniversalPoke extends plugin {
 
   /** 发送图片模块 */
   async sendImage(e, userState, identities) {
-    let imageChance = xrkcfg.poke?.image_chance || 0.3
+    let imageChance = hub.config.poke?.image_chance || 0.3
     
     if (userState.mood === 'happy') imageChance += 0.1
     if (userState.intimacy > 100) imageChance += 0.1
@@ -699,7 +701,7 @@ export class UniversalPoke extends plugin {
 
   /** 发送语音模块 */
   async sendVoice(e, userState, identities) {
-    let voiceChance = xrkcfg.poke?.voice_chance || 0.2
+    let voiceChance = hub.config.poke?.voice_chance || 0.2
     
     if (userState.mood === 'excited') voiceChance += 0.1
     if (userState.intimacy > 200) voiceChance += 0.1
@@ -751,7 +753,7 @@ export class UniversalPoke extends plugin {
 
   /** 计算回复概率（基准从配置 basic_reply_chance 读取） */
   calculateReplyChance(userState, identities) {
-    let chance = xrkcfg.poke?.basic_reply_chance ?? 0.6
+    let chance = hub.config.poke?.basic_reply_chance ?? 0.6
     
     chance += Math.min(0.2, userState.intimacy / 1000)
     
@@ -835,7 +837,7 @@ export class UniversalPoke extends plugin {
 
   /** 戳群成员 */
   async pokeMember(e, userId) {
-    if (!xrkcfg.poke?.pokeback_enabled) return
+    if (!hub.config.poke?.pokeback_enabled) return
     
     try {
       if (e.group?.pokeMember) {
@@ -999,13 +1001,18 @@ export class MasterPokeProtection extends plugin {
       name: '向日葵戳一戳主人保护',
       dsc: '非主人戳主人时的保护回复与惩罚',
       event: 'notice.group.poke',
-      priority: xrkcfg.corepoke_priority ?? -5000,
-      rule: [{ fnc: 'handlePoke', log: false }]
+      priority: hub.config.corepoke_priority,
+      rule: [{ fnc: 'handleMasterPoke', log: false }]
+    })
+    hub.registerRuntime({
+      id: 'xrk-master-poke-priority',
+      events: ['config'],
+      apply: () => { this.priority = hub.config.corepoke_priority }
     })
   }
 
   async handlePoke(e) {
-    if (!hub.chuomaster || !hub.poke?.enabled) return false
+    if (!hub.config.chuomaster || !hub.config.poke?.enabled) return false
     if (e.operator_id === e.target_id) return true
     if (!e.group_id) return false
 

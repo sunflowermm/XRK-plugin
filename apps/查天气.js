@@ -6,10 +6,6 @@ import { fetchNmcForecast } from '../lib/weather/nmc.js'
 import { formatForecastCard } from '../lib/weather/format.js'
 import { screenshotNmcForecast } from '../lib/weather/snapshot.js'
 
-function getWeatherCfg() {
-  return hub.weather
-}
-
 export class weather extends plugin {
   constructor() {
     super({
@@ -24,7 +20,7 @@ export class weather extends plugin {
   }
 
   async search_weather(e) {
-    const cfg = getWeatherCfg()
+    const cfg = hub.weather
     if (cfg.enabled === false) {
       await e.reply('查天气功能已关闭，可在锅巴或控制台「查天气」配置中开启')
       return true
