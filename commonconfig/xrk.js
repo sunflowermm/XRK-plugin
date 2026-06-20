@@ -38,7 +38,7 @@ export default class XrkConfig extends ConfigBase {
             help_priority: { type: 'number', label: '帮助优先级', default: 500, min: -99999, component: 'InputNumber' },
             sharing: { type: 'boolean', label: '资源分享', default: true, component: 'Switch' },
             screen_shot_http: { type: 'boolean', label: '网页截图', default: false, component: 'Switch' },
-            peopleai: { type: 'boolean', label: '人工AI', default: false, component: 'Switch' },
+            peopleai: { type: 'boolean', label: '词库 AI', default: false, component: 'Switch' },
             screen_shot_quality: { type: 'number', label: '网页截图渲染精度', default: 1.5, min: 1, max: 3, component: 'InputNumber' },
             news_pushtime: { type: 'number', label: '早报推送时间（点）', default: 8, min: 0, max: 23, component: 'InputNumber' },
             news: {
@@ -166,23 +166,24 @@ export default class XrkConfig extends ConfigBase {
           fields: {
             title: { type: 'string', label: '帮助标题', default: '向日葵帮助', component: 'Input' },
             subTitle: { type: 'string', label: '副标题', default: 'xrk-bot && XRK', component: 'Input' },
-            columnCount: { type: 'number', label: '列数', min: 1, default: 3, component: 'InputNumber' },
-            colWidth: { type: 'number', label: '列宽', min: 1, default: 265, component: 'InputNumber' },
-            theme: { type: 'string', label: '主题', default: 'all', component: 'Input' },
-            themeExclude: { type: 'array', label: '排除主题', itemType: 'string', default: ['default'], component: 'Tags' },
-            bgBlur: { type: 'boolean', label: '背景模糊', default: false, component: 'Switch' },
+            columnCount: { type: 'number', label: '列数', min: 1, max: 4, default: 2, component: 'InputNumber' },
             style: {
               type: 'object',
               label: '样式',
               component: 'SubForm',
               fields: {
-                fontColor: { type: 'string', label: '字体颜色', default: '#ceb78b', component: 'Input' },
-                descColor: { type: 'string', label: '描述颜色', default: '#eee', component: 'Input' },
-                contBgColor: { type: 'string', label: '内容背景色', default: 'rgba(6, 21, 31, .5)', component: 'Input' },
-                contBgBlur: { type: 'number', label: '内容背景模糊', default: 4, component: 'InputNumber' },
-                headerBgColor: { type: 'string', label: '头部背景色', default: 'rgba(6, 21, 31, .4)', component: 'Input' },
-                rowBgColor1: { type: 'string', label: '行背景色1', default: 'rgba(6, 21, 31, .2)', component: 'Input' },
-                rowBgColor2: { type: 'string', label: '行背景色2', default: 'rgba(6, 21, 31, .35)', component: 'Input' }
+                titleColor: { type: 'string', label: '标题颜色', default: '#f8fafc', component: 'Input' },
+                subTitleColor: { type: 'string', label: '副标题颜色', default: 'rgba(248,250,252,0.88)', component: 'Input' },
+                groupColor: { type: 'string', label: '分组标题色', default: '#0f172a', component: 'Input' },
+                accentColor: { type: 'string', label: '分组强调色', default: '#5eead4', component: 'Input' },
+                fontColor: { type: 'string', label: '条目标题色', default: '#1e293b', component: 'Input' },
+                descColor: { type: 'string', label: '描述颜色', default: '#475569', component: 'Input' },
+                footerColor: { type: 'string', label: '页脚颜色', default: 'rgba(248,250,252,0.72)', component: 'Input' },
+                contBgColor: { type: 'string', label: '面板背景色', default: 'rgba(255, 255, 255, 0.08)', component: 'Input' },
+                contBgBlur: { type: 'number', label: '面板模糊', default: 6, component: 'InputNumber' },
+                groupBgColor: { type: 'string', label: '分组背景', default: 'linear-gradient(90deg, rgba(94, 234, 212, 0.04), rgba(255, 255, 255, 0.03))', component: 'Input' },
+                rowBgColor1: { type: 'string', label: '奇数行背景', default: 'rgba(255, 255, 255, 0.01)', component: 'Input' },
+                rowBgColor2: { type: 'string', label: '偶数行背景', default: 'rgba(255, 255, 255, 0.03)', component: 'Input' }
               }
             },
             helpList: {

@@ -2,30 +2,21 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>向日葵帮助</title>
-    <link rel="stylesheet" href="help.css">
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="{{cssFile}}">
 </head>
-<body>
-    <!-- 背景层：撑满整页，随内容高度延伸 -->
-    <div class="background"></div>
-    <!-- 主容器 -->
+<body class="xrk-help">
     <div class="container">
-        <!-- 内容区域 -->
-        <div class="content">
-            <!-- 头部 -->
-            <div class="head-box">
-                <h1 class="title">{{title}}</h1>
-                <h2 class="sub-title">{{subTitle}}</h2>
-            </div>
-            <!-- 帮助内容 -->
-            <div class="cont-box">
-                {{helpSections}}
-            </div>
-            <!-- 页脚 -->
-            <footer>
-                <small>Powered by {{mainPackageName}} {{mainPackageVersion}} && {{pluginPackageName}} {{pluginPackageVersion}}</small>
-            </footer>
+        <div class="info-box head-box">
+            <h1 class="title">{{title}}</h1>
+            {{subTitleHtml}}
         </div>
+        <div class="cont-box">
+            {{helpSections}}
+        </div>
+        <footer class="copyright">
+            <small>Powered by {{mainPackageName}} {{mainPackageVersion}} && {{pluginPackageName}} {{pluginPackageVersion}}</small>
+        </footer>
     </div>
 </body>
 </html>

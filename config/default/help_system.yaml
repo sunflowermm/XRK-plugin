@@ -3,20 +3,20 @@
 
 title: 向日葵帮助
 subTitle: xrk-bot && XRK
-columnCount: 3
-colWidth: 265
-theme: all
-themeExclude:
-  - default
+columnCount: 2
 style:
-  fontColor: '#ceb78b'
-  descColor: '#eee'
-  contBgColor: 'rgba(6, 21, 31, .5)'
-  contBgBlur: 4
-  headerBgColor: 'rgba(6, 21, 31, .4)'
-  rowBgColor1: 'rgba(6, 21, 31, .2)'
-  rowBgColor2: 'rgba(6, 21, 31, .35)'
-bgBlur: false
+  titleColor: '#f8fafc'
+  subTitleColor: 'rgba(248,250,252,0.88)'
+  groupColor: '#0f172a'
+  accentColor: '#5eead4'
+  fontColor: '#1e293b'
+  descColor: '#475569'
+  footerColor: 'rgba(248,250,252,0.72)'
+  contBgColor: 'rgba(255, 255, 255, 0.08)'
+  contBgBlur: 6
+  groupBgColor: 'linear-gradient(90deg, rgba(94, 234, 212, 0.04), rgba(255, 255, 255, 0.03))'
+  rowBgColor1: 'rgba(255, 255, 255, 0.01)'
+  rowBgColor2: 'rgba(255, 255, 255, 0.03)'
 
 helpList:
   - group: 向日葵功能性插件
@@ -27,9 +27,6 @@ helpList:
       - icon: 2
         title: '#主人相关帮助'
         desc: 轻松增删主人哦
-      - icon: 15
-        title: '#向日葵ai帮助'
-        desc: 内含词库，大模型
   - group: 向日葵无正则插件
     list:
       - icon: 3
@@ -45,40 +42,43 @@ helpList:
     list:
       - icon: 5
         title: 小姐姐
-        desc: 无需多盐
+        desc: 随机短视频（mmp.cc）
       - icon: 18
         title: 黑丝
-        desc: 无需多盐
+        desc: 随机短视频；发「黑丝图」为静态图
       - icon: 19
         title: 白丝
-        desc: 无需多盐
+        desc: 随机短视频；发「白丝图」为静态图
       - icon: 6
         title: 高质量小姐姐
-        desc: 无需多盐
+        desc: 随机短视频（mmp.cc）
       - icon: 7
         title: 萝莉
-        desc: 无需多盐
+        desc: 随机短视频（mmp.cc）
       - icon: 8
         title: 热舞
-        desc: 无需多盐
+        desc: 随机短视频（mmp.cc）
       - icon: 9
         title: jk
-        desc: 无需多盐
+        desc: 随机短视频；发「jk图」为静态图
       - icon: 10
         title: 随机图片
-        desc: 无需多盐
+        desc: 二次元随机图（樱花/派次元/鸡屎 API）
       - icon: 11
         title: 东方图
-        desc: 无需多盐
+        desc: 随机东方 Project 图
+      - icon: 20
+        title: 二次元图
+        desc: 随机 ACG 壁纸
       - icon: 12
         title: cos图
-        desc: 无需多盐
+        desc: 随机 COS/原神 COS 图
       - icon: 13
         title: 妹子图
-        desc: 无需多盐
+        desc: 随机美女图（小小 API）
       - icon: 14
-        title: ks网红
-        desc: 无需多盐
+        title: 随机壁纸
+        desc: 随机高清壁纸（小小 API）
   - group: 向日葵娱乐插件
     list:
       - icon: 27
@@ -106,6 +106,12 @@ helpList:
       - icon: 26
         title: '#向日葵更新'
         desc: 更新一下，看看逗比作者认真不
-      - icon: 28
-        title: 向日葵妈咪妈咪哄
-        desc: 自动换最高版本签名(icqq)
+      - icon: 8
+        title: '#开启向日葵AI'
+        desc: 开启词库 AI 回复（非大模型）
+      - icon: 9
+        title: '#关闭向日葵AI'
+        desc: 关闭词库 AI
+      - icon: 10
+        title: 词库 AI
+        desc: 开启后发送触发词如「抱」；词条见 ai.json / 控制台

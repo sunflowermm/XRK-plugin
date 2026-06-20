@@ -1,53 +1,49 @@
 # 向日葵插件 (XRK-plugin)
 
+## 帮助图预览
+
+主帮助与子帮助共用 `resources/help/help_template.*`：**双列**布局、汉仪文黑字体、高透明毛玻璃面板；背景图每次从 `bgother/` 随机抽取（3× 设备像素比 PNG）。
+
+### 主帮助 `#向日葵帮助`
+
+![向日葵帮助预览](assets/help-preview.png)
+
+### 其它帮助（同一套模板与样式）
+
+| 指令 | 预览 |
+|------|------|
+| `#全局表情帮助` | ![全局表情](assets/help-emoji.png) |
+| `#刷步数帮助` | ![刷步数](assets/help-feet.png) |
+| `#插件相关帮助` | ![插件管理](assets/help-plugins.png) |
+| `#主人相关帮助` | ![主人](assets/help-master.png) |
+| `#早报推送帮助` | ![早报](assets/help-news.png) |
+| `#整点报时帮助` | ![报时](assets/help-time.png) |
+
+重新生成全部预览图（输出至 `assets/`，与 README 引用一致）：
+
+```bash
+node plugins/XRK-plugin/scripts/render-help-preview.mjs
+```
+
 ## 目录结构
 
 ```
 XRK-plugin/
-├── config/
-│   ├── default/              # 默认配置模板（只读，启动时复制到 data/xrkconfig/）
-│   │   ├── config.yaml       # 主配置
-│   │   ├── help_system.yaml  # 帮助菜单
-│   │   ├── screenshot.yaml   # 网页截图
-│   │   ├── ai.json           # 词库 AI
-│   │   ├── poke_responses.json # 戳一戳文案池
-│   │   ├── time_config.json  # 整点报时文案池
-│   │   ├── recommended_plugins.json   # 安装插件：推荐
-│   │   ├── entertainment_plugins.json # 安装插件：文娱
-│   │   ├── game_plugins.json         # 安装插件：游戏
-│   │   ├── ip_plugins.json           # 安装插件：IP类
-│   │   ├── js_plugins.json           # 安装插件：JS单文件
-│   │   └── README.md
-├── lib/
-│   ├── xrk-hub.js            # 统一配置中心（加载 / 监听 / 热更新）
-│   ├── xrk-runtime.js        # bindHub、早报 cron 重排
-│   ├── config-normalize.js   # 各子配置解析与词库匹配
-│   ├── config-paths.js       # 路径与启动复制 ensureAllConfigsSync
-│   ├── fetch-json.js         # HTTP JSON 请求
-│   └── restart.js            # 安装插件后重启
-├── components/               # 截图等工具（util/takeScreenshot 等）
-├── commonconfig/             # 框架扫描，Web 控制台编辑（仅一个入口）
-│   ├── xrk.js                # 多文件配置：config、help_system、ai、poke_responses、time_config、screenshot、5个安装插件列表
-│   └── README.md
-├── guoba.support.js          # 锅巴面板：export supportGuoba()，由 guoba-plugin 自动扫描加载
-├── apps/                     # 业务指令（index.js 自动加载）
-└── README.md
+├── assets/                   # README 预览图（已纳入版本库）
+├── lib/help-render.js        # 渲染 + captureHelpScreenshot
+├── lib/sub-help-pages.js     # 子帮助内容
+├── resources/help/           # 模板、字体、bgother 背景
+├── apps/help.js              # 主帮助
+└── apps/其他帮助.js           # 子帮助
 ```
 
-## 配置体系
+## 配置
 
-- **标准模板**：`config/default/`，随插件发布，用户不直接改。
-- **用户配置**：`data/xrkconfig/`，启动时从 default 复制缺的文件；CommonConfig 与各模块只读写此目录。
-- **入口**：首次加载会执行 `ensureAllConfigsSync()`，将 default 下 `.yaml`/`.yml`/`.json` 复制到 `data/xrkconfig/`（仅当目标不存在）。
+- `help_system.yaml`：`columnCount: 2` 双列；`style.contBgColor` 等控制透明度
+- 背景图：`resources/help/bgother/`
 
-## 使用方式
+## 使用
 
-- **锅巴**：安装 `guoba-plugin` 后，锅巴左侧会出现「向日葵插件」；主配置写 `config.yaml`，查天气项写 `weather.yaml`（`weather_cfg.*` 字段）。多文件完整编辑仍用 XRK 控制台「向日葵配置」。
-- **查天气**：`#查天气北京`，爬取 [中央气象台](http://www.nmc.cn/) 页面 `id=day7` 七天预报区，不再使用区域截图。
-- **配置**：`import hub from './lib/xrk-hub.js'`；读子配置用 `hub.config`、`hub.aiDict`、`hub.helpList`、`hub.getPluginList('recommended_plugins')` 等；写主配置用 `hub.set(key, value)` / `hub.save()`。
-- **热更新**：在插件里 `bindHub(this, { events: ['config', ...], apply })`（见 `lib/xrk-runtime.js`）。
-
-## 依赖
-
-- 框架：`lib/utils/file-utils.js`、`lib/commonconfig/commonconfig.js`
-- 业务只依赖 `lib/xrk-hub.js`，不再保留 `xrkconfig` / `help_system` 等旧入口。
+- **主帮助**：`#向日葵帮助` / `#xrk帮助`
+- **子帮助**：见上表指令
+- **配置**：`import hub from './lib/xrk-hub.js'`
