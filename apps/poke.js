@@ -206,7 +206,7 @@ export class UniversalPoke extends plugin {
   }
 
   getResponses() {
-    return hub.config.pokeResponses
+    return hub.pokeResponses
   }
 
   /** 运行时读取 poke.modules 开关（与 commonconfig 一致） */
