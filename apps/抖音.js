@@ -1,10 +1,12 @@
 import plugin from '../../../lib/plugins/plugin.js';
+import { FileUtils } from '../../../lib/utils/file-utils.js';
 import {
   readRDouyinCookie,
   fetchDouyinHotList,
   formatHotListText,
   pickDouyinFeedVideo,
-  pickDouyinHotWordWithFeedVideo
+  pickDouyinHotWordWithFeedVideo,
+  downloadDouyinPlayToFile
 } from '../lib/douyin-xrk.js';
 
 const REG = '^#?(xrk|向日葵)?抖音';
@@ -29,6 +31,17 @@ export class XrkDouyin extends plugin {
   needCookieReply() {
     if (readRDouyinCookie()) return false;
     return '未配置抖音 Cookie：请在 R 插件 plugins/rconsole-plugin/config/tools.yaml 填写 douyinCookie';
+  }
+
+  async replyFeedVideo(e, caption, playUrl) {
+    await e.reply(caption);
+    let local = '';
+    try {
+      local = await downloadDouyinPlayToFile(playUrl);
+      await e.reply(segment.video(local));
+    } finally {
+      if (local) await FileUtils.unlink(local);
+    }
   }
 
   async hotList(e) {
@@ -60,7 +73,7 @@ export class XrkDouyin extends plugin {
         return true;
       }
       const head = `抖音推荐${v.author ? ` · ${v.author}` : ''}${v.desc ? `\n${v.desc.slice(0, 80)}` : ''}`;
-      await e.reply([head, segment.video(v.playUrl)]);
+      await this.replyFeedVideo(e, head, v.playUrl);
     } catch (err) {
       Bot.makeLog('warn', `[XRK douyin] 推荐失败: ${err.message}`, 'XRK-plugin');
       await e.reply(`抖音推荐获取失败：${err.message}`);
@@ -83,7 +96,7 @@ export class XrkDouyin extends plugin {
       const tip = word
         ? `今日热词：${word.word}${word.hotText ? `（${word.hotText}）` : ''}\n附推荐流视频 ↓`
         : '抖音推荐视频';
-      await e.reply([tip, segment.video(video.playUrl)]);
+      await this.replyFeedVideo(e, tip, video.playUrl);
     } catch (err) {
       Bot.makeLog('warn', `[XRK douyin] 热词视频失败: ${err.message}`, 'XRK-plugin');
       await e.reply(`获取失败：${err.message}`);
