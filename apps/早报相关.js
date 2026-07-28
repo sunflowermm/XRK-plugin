@@ -4,7 +4,7 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import hub from '../lib/xrk-hub.js';
 import {
-  buildMorningNewsParts,
+  buildMorningNewsReply,
   morningNewsCronExpr,
   pushMorningNewsToGroups
 } from '../lib/morning-news.js';
@@ -42,10 +42,7 @@ export class SettingsPlugin extends plugin {
 
   async sendMorningNews(e) {
     try {
-      // 文/图分条：大图混发易触发 NapCat sendMsg 超时，超时后 loader 会丢掉图片只回文字
-      const { intro, image } = await buildMorningNewsParts();
-      await e.reply(intro);
-      await e.reply(segment.image(image));
+      await e.reply(await buildMorningNewsReply());
     } catch (err) {
       logger.error('[早报] 手动获取失败:', err);
       await e.reply('早报获取失败，请稍后再试');

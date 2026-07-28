@@ -40,7 +40,7 @@ const previewList = filterHelpList(helpList, true)
 const jobs = [
   {
     slug: '_preview-main',
-    out: 'help-preview.png',
+    out: 'help-preview.jpg',
     title: helpCfg.title,
     subTitle: helpCfg.subTitle,
     helpList: previewList,
@@ -51,7 +51,7 @@ const jobs = [
 for (const [key, page] of Object.entries(SUB_HELP_PAGES)) {
   jobs.push({
     slug: `_preview-${key}`,
-    out: `help-${key}.png`,
+    out: `help-${key}.jpg`,
     title: page.title,
     subTitle: page.subTitle ?? '',
     helpList: page.groups,
@@ -75,19 +75,19 @@ try {
     })
     await page.goto(`file:///${htmlPath.replace(/\\/g, '/')}`, { waitUntil: 'networkidle0', timeout: 60000 })
     await page.evaluateHandle('document.fonts.ready')
-    const clip = await page.evaluate(() => {
+    const clip = await page.evaluate((w) => {
       const root = document.querySelector('.container') || document.body
       const rect = root.getBoundingClientRect()
       const h = Math.ceil(rect.bottom + window.scrollY + 4)
-      return { x: 0, y: 0, width: 1280, height: Math.max(h, 120) }
-    })
+      return { x: 0, y: 0, width: w, height: Math.max(h, 120) }
+    }, HELP_PAGE_WIDTH)
     await page.setViewport({
       width: HELP_PAGE_WIDTH,
       height: clip.height,
       deviceScaleFactor: HELP_DEVICE_SCALE
     })
     const outFile = path.join(outDir, job.out)
-    await page.screenshot({ path: outFile, clip, type: 'png' })
+    await page.screenshot({ path: outFile, clip, type: 'jpeg', quality: 82 })
     console.log(`已生成: ${outFile}`)
     fs.unlinkSync(htmlPath)
     fs.unlinkSync(cssPath)

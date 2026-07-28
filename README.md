@@ -20,27 +20,27 @@
 ### 主帮助
 
 <p align="center">
-  <img src="assets/help-preview.png" width="72%" alt="#向日葵帮助" />
+  <img src="assets/help-preview.jpg" width="72%" alt="#向日葵帮助" />
 </p>
 <p align="center"><sub><code>#向日葵帮助</code></sub></p>
 
 ### 子帮助
 
 <p align="center">
-  <img src="assets/help-plugins.png" width="48%" alt="#插件相关帮助" />
-  <img src="assets/help-emoji.png" width="48%" alt="全局表情帮助" />
+  <img src="assets/help-plugins.jpg" width="48%" alt="#插件相关帮助" />
+  <img src="assets/help-emoji.jpg" width="48%" alt="全局表情帮助" />
 </p>
 <p align="center"><sub>左：插件管理　右：全局表情</sub></p>
 
 <p align="center">
-  <img src="assets/help-feet.png" width="48%" alt="刷步数帮助" />
-  <img src="assets/help-news.png" width="48%" alt="早报推送帮助" />
+  <img src="assets/help-feet.jpg" width="48%" alt="刷步数帮助" />
+  <img src="assets/help-news.jpg" width="48%" alt="早报推送帮助" />
 </p>
 <p align="center"><sub>左：刷步数　右：早报推送</sub></p>
 
 <p align="center">
-  <img src="assets/help-time.png" width="48%" alt="整点报时帮助" />
-  <img src="assets/help-master.png" width="48%" alt="主人相关帮助" />
+  <img src="assets/help-time.jpg" width="48%" alt="整点报时帮助" />
+  <img src="assets/help-master.jpg" width="48%" alt="主人相关帮助" />
 </p>
 <p align="center"><sub>左：整点报时　右：主人管理</sub></p>
 

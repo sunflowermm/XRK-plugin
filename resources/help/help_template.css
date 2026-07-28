@@ -6,22 +6,23 @@ body.xrk-help,
 html {
     margin: 0;
     padding: 0;
-    width: 1280px;
+    width: 960px;
     height: auto;
     min-height: 0;
     position: relative;
-    font-family: 'XRK Help', '汉仪文黑-65W', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+    -webkit-font-smoothing: antialiased;
     color: #1e293b;
 }
 
 .container {
     position: relative;
     z-index: 1;
-    width: 1280px;
-    max-width: 1280px;
-    min-height: 900px;
+    width: 960px;
+    max-width: 960px;
+    min-height: 720px;
     margin: 0 auto;
-    padding: 0 40px 32px;
+    padding: 0 28px 24px;
     display: flex;
     flex-direction: column;
 }
@@ -35,49 +36,49 @@ html {
 }
 
 .info-box {
-    margin: 0 -40px 20px;
-    padding: 12px 40px 8px;
+    margin: 0 -28px 16px;
+    padding: 10px 28px 6px;
 }
 
 .head-box {
     margin: 0;
-    padding: 12px 0 18px;
+    padding: 10px 0 14px;
     text-align: center;
 }
 
 .head-box .title {
-    font-size: 40px;
+    font-size: 34px;
     font-weight: 700;
     letter-spacing: 0.02em;
     margin: 0;
     line-height: 1.3;
     color: #f8fafc;
-    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.72), 0 0 2px rgba(0, 0, 0, 0.45);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
 }
 
 .head-box .sub-title {
-    font-size: 18px;
-    margin: 12px 0 0;
+    font-size: 16px;
+    margin: 10px 0 0;
     color: rgba(248, 250, 252, 0.95);
     font-weight: 500;
-    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
 
 .cont-box {
-    border-radius: 16px;
+    border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.22);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
     border: 1px solid rgba(255, 255, 255, 0.45);
     background: rgba(255, 255, 255, 0.16);
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(12px);
 }
 
 .help-group {
-    font-size: 21px;
+    font-size: 18px;
     font-weight: 700;
-    padding: 18px 22px 16px 24px;
+    padding: 14px 18px 12px 20px;
     color: #0f172a;
-    border-left: 5px solid #5eead4;
+    border-left: 4px solid #5eead4;
     background: linear-gradient(90deg, rgba(94, 234, 212, 0.18), rgba(255, 255, 255, 0.20));
 }
 
@@ -103,9 +104,9 @@ html {
 .help-table .td {
     display: table-cell;
     position: relative;
-    padding: 22px 18px 22px 72px;
-    font-size: 17px;
-    line-height: 28px;
+    padding: 16px 14px 16px 58px;
+    font-size: 15px;
+    line-height: 1.45;
     text-align: left;
     vertical-align: middle;
     box-shadow: 0 0 1px 0 rgba(100, 116, 139, 0.18) inset;
@@ -113,47 +114,45 @@ html {
 
 .help-icon {
     position: absolute;
-    left: 14px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.2);
 }
 
 .help-title {
     display: block;
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 700;
-    line-height: 28px;
+    line-height: 1.35;
     color: #0f172a;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
 .help-desc {
     display: block;
-    font-size: 16px;
-    line-height: 24px;
-    margin-top: 5px;
-    color: #1e293b;
+    font-size: 13px;
+    line-height: 1.4;
+    margin-top: 4px;
+    color: #334155;
     font-weight: 500;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .copyright {
     text-align: center;
     flex-shrink: 0;
     margin-top: 0;
-    padding-top: 18px;
-    padding-bottom: 6px;
+    padding-top: 14px;
+    padding-bottom: 4px;
     color: #f8fafc;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 500;
-    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.65);
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.6);
 }
 
 .copyright small {
