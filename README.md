@@ -1,20 +1,45 @@
-# 向日葵插件 · XRK-plugin
+<h1 align="center">向日葵插件 · XRK-plugin</h1>
 
-> 面向 [XRK-Yunzai](https://github.com/sunflowermm/XRK-Yunzai) 的多功能消息插件：帮助图、插件安装/管理、资源图、早报自渲、抖音热榜/推荐、整点报时等。
+<p align="center">
+  <strong>面向 <a href="https://github.com/sunflowermm/XRK-Yunzai">XRK-Yunzai</a> 的多功能消息插件</strong><br>
+  帮助图 · 插件安装与管理 · 资源图 · 早报自渲 · 抖音热榜/推荐 · 整点报时
+</p>
 
-![License](https://img.shields.io/badge/license-MIT-green)
-![Platform](https://img.shields.io/badge/platform-XRK--Yunzai-blue)
-![Version](https://img.shields.io/badge/version-2.0.0-informational)
+<div align="center">
+
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-XRK--Yunzai-blue?style=flat-square)](https://github.com/sunflowermm/XRK-Yunzai)
+[![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen?style=flat-square)](package.json)
+
+</div>
+
+---
+
+## 目录
+
+- [预览](#预览)
+- [功能](#功能)
+- [环境要求](#环境要求)
+- [安装](#安装)
+- [常用指令](#常用指令)
+- [配置与入库](#配置与入库)
+- [重新生成预览图](#重新生成预览图)
+- [目录结构](#目录结构)
+- [License](#license)
+
+---
 
 ## 预览
 
-入库预览图在 `assets/`（随仓库发布）。一行两张：
+<p align="center">预览图位于 <code>assets/</code>，随仓库发布；每行两张。</p>
+
+### 帮助卡
 
 <p align="center">
   <img src="assets/help-preview.png" width="48%" alt="#向日葵帮助" />
   <img src="assets/help-plugins.png" width="48%" alt="#插件相关帮助" />
 </p>
-<p align="center"><sub>左：主帮助　右：插件管理帮助（查/装/停用等）</sub></p>
+<p align="center"><sub>左：主帮助　右：插件管理帮助</sub></p>
 
 <p align="center">
   <img src="assets/help-emoji.png" width="48%" alt="全局表情帮助" />
@@ -34,33 +59,67 @@
 </p>
 <p align="center"><sub>左：主人管理　右：早报自渲示例</sub></p>
 
-> `#安装插件列表` 运行时生成的分类截图在 `resources/plugins/*_group_*.png`，体积大且随列表变化，**已 gitignore，不入库**；插件管理说明见上方 `help-plugins.png`。
+### 安装插件列表
+
+<p align="center">
+  <code>#安装插件列表</code> 运行时按分类截图；下列为入库示例（推荐 / 游戏）。<br>
+  全量缓存 <code>resources/plugins/*_group_*.png</code> 体积大且随列表变化，<strong>gitignore，不入库</strong>。
+</p>
+
+<p align="center">
+  <img src="assets/plugins-list-recommended.png" width="48%" alt="推荐插件列表示例" />
+  <img src="assets/plugins-list-game.png" width="48%" alt="游戏插件列表示例" />
+</p>
+<p align="center"><sub>左：推荐插件　右：游戏插件</sub></p>
+
+---
 
 ## 功能
 
-- 帮助卡：主帮助 + 各子帮助页（表情 / 步数 / 早报 / 报时 / 插件 / 主人）
-- 插件：查 / 装 / 删 / 启停；分类列表截图
-- 资源图：随机图与关键词图（如东方、cos、黑丝等）
-- 早报：拉取 JSON → 本地 HTML 截图；可定时推送白名单
-- 抖音：热榜 / 推荐流 / 热词视频（复用 R Cookie；**链接解析请用 R**）
-- 其它：全局表情、偷图、刷步数、整点报时、天气、群文件等
+| 分类 | 说明 |
+|------|------|
+| 帮助卡 | 主帮助与各子页（表情 / 步数 / 早报 / 报时 / 插件 / 主人） |
+| 插件管理 | 查 / 装 / 删 / 启停；分类列表截图 |
+| 资源图 | 随机图与关键词图（东方、cos、黑丝等） |
+| 早报 | JSON → 本地 HTML 截图；白名单定时推送 |
+| 抖音 | 热榜 / 推荐流 / 热词视频（复用 R Cookie；链接解析请用 R） |
+| 其它 | 全局表情、偷图、刷步数、整点报时、天气、群文件等 |
+
+---
 
 ## 环境要求
 
-- [XRK-Yunzai](https://github.com/sunflowermm/XRK-Yunzai)（Node.js 24+）
-- 可选：已安装 [rconsole-plugin](https://gitee.com/kyrzy0416/rconsole-plugin) 并配置 `douyinCookie`（抖音热榜/推荐需要）
+| 组件 | 说明 |
+|------|------|
+| 框架 | [XRK-Yunzai](https://github.com/sunflowermm/XRK-Yunzai)（Node.js 24+） |
+| 可选 | [rconsole-plugin](https://gitee.com/kyrzy0416/rconsole-plugin) + `douyinCookie`（抖音热榜 / 推荐） |
+
+---
 
 ## 安装
 
-将本仓库放到 Yunzai 的 `plugins/XRK-plugin/`，在框架根目录安装依赖后重启 Bot：
+在 Yunzai 根目录将本仓库克隆到 `plugins/XRK-plugin/`（三选一）：
 
 ```bash
-# 若为独立 clone
-git clone <本仓库地址> plugins/XRK-plugin
+# Gitcode（国内）
+git clone --depth=1 https://gitcode.com/Xrkseek/XRK-plugin.git plugins/XRK-plugin
 
-# 框架根目录按需补依赖（见启动日志提示）
+# Gitee
+git clone --depth=1 https://gitee.com/xrkseek/XRK-plugin.git plugins/XRK-plugin
+
+# GitHub
+git clone --depth=1 https://github.com/sunflowermm/XRK-plugin.git plugins/XRK-plugin
+```
+
+依赖（在框架根目录按需安装，见启动日志）：
+
+```bash
 pnpm add axios uuid form-data node-schedule -w
 ```
+
+完成后重启 Bot。
+
+---
 
 ## 常用指令
 
@@ -72,21 +131,25 @@ pnpm add axios uuid form-data node-schedule -w
 | 早报 | `#早报` · `#今日早报` · 白名单 / 推送时间相关指令 |
 | 抖音 | `#抖音热榜` · `#抖音推荐` · `#抖音热词视频` |
 
-完整条目以帮助图为准。
+<p align="center"><sub>完整条目以帮助图为准。</sub></p>
 
-## 配置
+---
 
-| 路径 | 说明 | 是否入库 |
-|------|------|----------|
+## 配置与入库
+
+| 路径 | 说明 | 入库 |
+|------|------|------|
 | `config/default/*` | 默认模板（帮助列表、插件分类 JSON 等） | 是 |
-| `data/xrkconfig/`（或端口目录） | 运行时用户配置（首次从 default 复制） | 否（本机） |
+| `data/xrkconfig/`（或端口目录） | 运行时用户配置（首次从 default 复制） | 否 |
 | `help_system.yaml` | 主帮助文案、`columnCount`、面板样式 | 模板在 default |
-| `assets/*.png` | README / 文档用预览图 | **是** |
-| `resources/help/` 模板与背景 | 帮助渲染资源 | 是（运行时生成的 html/css 除外） |
-| `resources/plugins/*_group_*.png` | `#安装插件列表` 截图缓存 | **否**（gitignore） |
-| R：`plugins/rconsole-plugin/config/tools.yaml` | `douyinCookie` | 属 R 仓库；勿把 Cookie 提交到公开仓 |
+| `assets/*.png` | README 预览图（含帮助卡与列表示例） | **是** |
+| `resources/help/` | 帮助模板、字体、背景 | 是（运行时 html/css 除外） |
+| `resources/plugins/*_group_*.png` | `#安装插件列表` 全量截图缓存 | **否** |
+| R：`plugins/rconsole-plugin/config/tools.yaml` | `douyinCookie` | 属 R 仓；勿提交 Cookie |
 
-帮助背景映射：`lib/sub-help-pages.js` → `HELP_BACKGROUNDS` + `resources/help/bgother/`。
+帮助背景：`lib/sub-help-pages.js` → `HELP_BACKGROUNDS` + `resources/help/bgother/`。
+
+---
 
 ## 重新生成预览图
 
@@ -100,6 +163,10 @@ node plugins/XRK-plugin/scripts/render-help-preview.mjs
 node plugins/XRK-plugin/scripts/render-morning-news-preview.mjs
 ```
 
+安装列表示例：从本机 `resources/plugins/` 拷贝到 `assets/`（如 `plugins-list-recommended.png`、`plugins-list-game.png`）。
+
+---
+
 ## 目录结构
 
 ```
@@ -107,13 +174,17 @@ XRK-plugin/
 ├── apps/                 # 指令入口
 ├── lib/                  # 帮助渲染、插件列表、抖音、早报等
 ├── resources/help/       # 帮助模板、字体、背景
-├── resources/plugins/    # 列表 HTML 模板；截图缓存不入库
+├── resources/plugins/    # 列表 HTML 模板；全量截图缓存不入库
 ├── assets/               # 入库预览 PNG
 ├── config/default/       # 默认配置模板
 ├── scripts/              # 预览渲染脚本
 └── commonconfig/         # CommonConfig（若启用）
 ```
 
+---
+
 ## License
 
-[MIT](LICENSE) © Sunflower Studio
+<p align="center">
+  <a href="LICENSE">MIT</a> © Sunflower Studio
+</p>
