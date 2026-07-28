@@ -96,10 +96,10 @@
         "git": "https://gitee.com/suancaixianyu/xianyu-plugin"
     },
     {
-        "name": "ai-plugin",
+        "name": "fengyun-steward-plugin",
         "cn_name": "风云AI",
-        "anothername": "风云ai ai",
-        "description": "由风云提供的AI插件。",
-        "git": "https://gitcode.com/fengyunnb_admin/ai"
+        "anothername": "风云ai ai 风云管家",
+        "description": "QQ 群陪伴插件：对话（OpenAI 兼容）、Kimi 识图/联网、记忆与风格学习、戳一戳、偷表情及群管，支持锅巴配置。",
+        "git": "https://gitcode.com/fengyunnb_admin/fengyun-steward-plugin"
     }
 ]
