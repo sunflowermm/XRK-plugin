@@ -16,6 +16,7 @@ await import(pathToFileURL(path.join(yunzaiRoot, 'lib/util.js')).href)
 
 const {
   fetchMorningNewsData,
+  attachDouyinHotToNews,
   renderMorningNewsImage,
   fetchMorningNewsImageUrl
 } = await import('../lib/morning-news.js')
@@ -23,7 +24,7 @@ const { fetchImageBuffer } = await import('../lib/fetch-media.js')
 
 let buf = null
 try {
-  const data = await fetchMorningNewsData()
+  const data = await attachDouyinHotToNews(await fetchMorningNewsData())
   buf = await renderMorningNewsImage(data)
 } catch (err) {
   console.warn('自渲染失败，回退官方图:', err.message)
