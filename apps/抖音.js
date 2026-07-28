@@ -4,7 +4,8 @@ import {
   readRDouyinCookie,
   fetchDouyinHotList,
   formatHotListText,
-  pickDownloadableFeedVideo
+  pickDownloadableFeedVideo,
+  pickDownloadableHotWordVideo
 } from '../lib/douyin-xrk.js';
 
 const REG = '^#?(xrk|向日葵)?抖音';
@@ -84,20 +85,15 @@ export class XrkDouyin extends plugin {
       return true;
     }
     try {
-      const board = await fetchDouyinHotList(30);
-      const words = board.list.filter(w => w.hotValue > 0);
-      const word = words.length
-        ? words[Math.floor(Math.random() * Math.min(words.length, 15))]
-        : null;
-      const tip = word
-        ? `今日热词：${word.word}${word.hotText ? `（${word.hotText}）` : ''}\n附推荐流视频 ↓`
-        : '抖音推荐视频';
-      await e.reply(tip);
-      const video = await pickDownloadableFeedVideo();
+      const { word, video } = await pickDownloadableHotWordVideo();
       if (!video?.localPath) {
-        await e.reply('暂无可用视频，请稍后再试');
+        await e.reply('暂无可用热词视频，请稍后再试');
         return true;
       }
+      const tip = word
+        ? `今日热词：${word.word}${word.hotText ? `（${word.hotText}）` : ''}${video.author ? `\n${video.author}` : ''}${video.desc ? `\n${video.desc.slice(0, 80)}` : ''}`
+        : '抖音热词视频';
+      await e.reply(tip);
       await this.sendLocalVideo(e, video.localPath);
     } catch (err) {
       Bot.makeLog('warn', `[XRK douyin] 热词视频失败: ${err.message}`, 'XRK-plugin');

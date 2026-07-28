@@ -76,7 +76,7 @@ helpList:
         desc: 推荐流随机视频
       - icon: 7
         title: '#抖音热词视频'
-        desc: 随机热词 + 推荐视频
+        desc: 热榜热词 + 该话题关联视频
   - group: 向日葵娱乐插件
     list:
       - icon: 27
