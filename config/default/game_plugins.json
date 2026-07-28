@@ -96,7 +96,7 @@
         "git": "https://gitee.com/suancaixianyu/xianyu-plugin"
     },
     {
-        "name": "fengyun-steward-plugin",
+        "name": "ai-plugin",
         "cn_name": "风云AI",
         "anothername": "风云ai ai 风云管家",
         "description": "QQ 群陪伴插件：对话（OpenAI 兼容）、Kimi 识图/联网、记忆与风格学习、戳一戳、偷表情及群管，支持锅巴配置。",
