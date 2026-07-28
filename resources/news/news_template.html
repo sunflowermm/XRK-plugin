@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{title}}</title>
+  <link rel="stylesheet" href="{{cssFile}}" />
+</head>
+<body class="xrk-news">
+  <div class="card">
+    <header class="head">
+      <h1 class="title">每天 60 秒读懂世界</h1>
+      <p class="meta">{{date}} · {{dayOfWeek}} · {{lunarDate}}</p>
+    </header>
+    <ol class="news-list">
+      {{newsItems}}
+    </ol>
+    <footer class="tip">
+      <span class="tip-label">微语</span>
+      <p class="tip-text">{{tip}}</p>
+    </footer>
+  </div>
+</body>
+</html>

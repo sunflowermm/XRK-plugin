@@ -1,6 +1,5 @@
 import plugin from '../../../lib/plugins/plugin.js';
 import hub from '../lib/xrk-hub.js';
-import { takeScreenshot } from '../lib/web-screenshot.js';
 import { captureHelpScreenshot } from '../lib/help-render.js';
 import { SUB_HELP_PAGES } from '../lib/sub-help-pages.js';
 
@@ -30,7 +29,7 @@ export class showHelp extends plugin {
     const page = SUB_HELP_PAGES[pageKey];
     if (!page) return;
 
-    const buf = await captureHelpScreenshot(takeScreenshot, {
+    const buf = await captureHelpScreenshot({
       slug: `sub-${pageKey}`,
       helpCfg: hub.helpCfg,
       helpList: page.groups,

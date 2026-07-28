@@ -39,45 +39,44 @@ helpList:
         desc: 独立概率戳一戳，多样效果人性化组合
   - group: 向日葵资源相关功能
     list:
-      - icon: 5
-        title: 小姐姐
-        desc: 随机短视频（mmp.cc）
-      - icon: 18
-        title: 黑丝
-        desc: 随机短视频；发「黑丝图」为静态图
-      - icon: 19
-        title: 白丝
-        desc: 随机短视频；发「白丝图」为静态图
-      - icon: 6
-        title: 高质量小姐姐
-        desc: 随机短视频（mmp.cc）
-      - icon: 7
-        title: 萝莉
-        desc: 随机短视频（mmp.cc）
-      - icon: 8
-        title: 热舞
-        desc: 随机短视频（mmp.cc）
-      - icon: 9
-        title: jk
-        desc: 随机短视频；发「jk图」为静态图
       - icon: 10
-        title: 随机图片
-        desc: 二次元随机图（樱花/派次元/鸡屎 API）
+        title: '#随机图片'
+        desc: 二次元随机图
       - icon: 11
-        title: 东方图
+        title: '#东方图'
         desc: 随机东方 Project 图
       - icon: 20
-        title: 二次元图
+        title: '#二次元图'
         desc: 随机 ACG 壁纸
       - icon: 12
-        title: cos图
-        desc: 随机 COS/原神 COS 图
+        title: '#cos图'
+        desc: 随机 COS 图
       - icon: 13
-        title: 妹子图
-        desc: 随机美女图（小小 API）
+        title: '#妹子图'
+        desc: 随机美女图
       - icon: 14
-        title: 随机壁纸
-        desc: 随机高清壁纸（小小 API）
+        title: '#随机壁纸'
+        desc: 随机高清壁纸
+      - icon: 18
+        title: '#黑丝图'
+        desc: 随机黑丝图
+      - icon: 19
+        title: '#白丝图'
+        desc: 随机白丝图
+      - icon: 9
+        title: '#jk图'
+        desc: 随机 JK 图
+  - group: 向日葵抖音
+    list:
+      - icon: 5
+        title: '#抖音热榜'
+        desc: 今日抖音热搜榜（复用 R Cookie）
+      - icon: 6
+        title: '#抖音推荐'
+        desc: 推荐流随机视频
+      - icon: 7
+        title: '#抖音热词视频'
+        desc: 随机热词 + 推荐视频
   - group: 向日葵娱乐插件
     list:
       - icon: 27

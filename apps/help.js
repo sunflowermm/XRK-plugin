@@ -1,5 +1,4 @@
 import plugin from '../../../lib/plugins/plugin.js';
-import { takeScreenshot } from '../lib/web-screenshot.js';
 import hub from '../lib/xrk-hub.js';
 import { captureHelpScreenshot, filterHelpList } from '../lib/help-render.js';
 
@@ -21,7 +20,7 @@ export class showmainHelp extends plugin {
 
   async generateHelpScreenshot(e) {
     try {
-      const buf = await captureHelpScreenshot(takeScreenshot, {
+      const buf = await captureHelpScreenshot({
         slug: 'help',
         helpCfg: hub.helpCfg,
         helpList: filterHelpList(),
