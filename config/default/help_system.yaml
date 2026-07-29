@@ -78,7 +78,7 @@ helpList:
     list:
       - icon: 27
         title: '#刷步数帮助'
-        desc: Zepp Life 刷步数（私聊）
+        desc: Zepp 刷步（账密私聊绑定，群聊可刷）
       - icon: 16
         title: '#全局(表情)帮助'
         desc: 让机器人吵起来
