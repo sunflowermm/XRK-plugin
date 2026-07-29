@@ -68,7 +68,7 @@ async function submitSteps(username, password, step) {
     try {
       const res = await fetch(api.buildUrl(username, password, step), {
         signal: AbortSignal.timeout(30000),
-        headers: { 'User-Agent': 'XRK-plugin/刷步数' }
+        headers: { 'User-Agent': 'XRK-plugin/zepp-steps' }
       })
       const text = await res.text()
       let data
