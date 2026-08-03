@@ -1,7 +1,7 @@
-import AIStream from '../../../lib/aistream/aistream.js';
+import AiWorkflow from '../../../lib/ai-workflow/ai-workflow.js';
 import fetch from 'node-fetch';
 
-export default class WeatherStream extends AIStream {
+export default class WeatherStream extends AiWorkflow {
   constructor() {
     super({
       name: 'weather',
